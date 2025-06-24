@@ -110,6 +110,12 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    splits {
+        abi {
+            // ... for blur
+            include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+        }
+    }
 }
 
 dependencies {

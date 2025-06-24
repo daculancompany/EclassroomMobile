@@ -1,5 +1,5 @@
 //@ts-nocheck
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
     View,
     StyleSheet,
@@ -25,28 +25,11 @@ import {
     AttendanceTab,
     MainContainer,
     ProgressReportTab,
+    BroadcastTab,
 } from '../components/';
-// ===== TAB NAVIGATOR =====
-
-// ===== TAB SCREENS (Same as before) =====
-const BroadcastTab = () => (
-    <ScrollView style={styles.tabContent}>
-        <Card style={styles.card}>
-            <Card.Title title="Announcement" />
-            <Card.Content>
-                <Text>Homework due next Monday!</Text>
-            </Card.Content>
-        </Card>
-        <Card style={styles.card}>
-            <Card.Title title="Reminder" />
-            <Card.Content>
-                <Text>Bring your project materials tomorrow.</Text>
-            </Card.Content>
-        </Card>
-    </ScrollView>
-);
-
-
+import {DEFAULT_BANNER, HERO_IMAGE} from '../utils/constant';
+import useClassRoomSettings from '../hooks/useClassRoomSettings';
+import {useRoute} from '@react-navigation/native';
 
 const AcademicRecordTab = () => (
     <ScrollView style={styles.tabContent}>
@@ -108,7 +91,27 @@ const GradientTabBar = props => {
 // ===== MAIN COMPONENT =====
 
 const ClassroomDetails = ({navigation}) => {
-    // return <AnimatedHeaderWithImage />
+    const route = useRoute();
+    const {class_id} = route.params || {};
+    const [previewImage, setPreviewImage] = useState(null);
+    const {
+        isLoading,
+        data: classroom,
+        refetch: refetchSettings,
+    } = useClassRoomSettings(class_id);
+
+    useEffect(() => {
+        if (classroom) {
+            if (classroom.hero_image) {
+                setPreviewImage(HERO_IMAGE + classroom.hero_image);
+            }
+        } else {
+            if (!isLoading) {
+                setPreviewImage(DEFAULT_BANNER);
+            }
+        }
+    }, [classroom]);
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar
@@ -118,20 +121,20 @@ const ClassroomDetails = ({navigation}) => {
             />
             <ImageBackground
                 source={{
-                    uri: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+                    uri: previewImage,
                 }}
                 style={styles.imageBackground}
                 resizeMode="cover">
                 <LinearGradient
-                    colors={['#ff00ffa6', '#07b5b59c']}
+                    colors={['#ff00ff75', '#07b5b559']}
                     start={{x: 0, y: 0}}
                     end={{x: 1, y: 1}}
                     style={[styles.gradient]}>
                     <Appbar.Header
                         style={{
                             backgroundColor: 'transparent',
-                            height: 140,
-                            marginTop: -30,
+                            height: 100,
+                            marginTop: -20,
                         }}>
                         <Appbar.BackAction
                             onPress={() => navigation.goBack()}
@@ -195,10 +198,10 @@ const styles = StyleSheet.create({
 
     imageBackground: {
         width: '100%',
-        height: 140,
+        height: 100,
     },
     gradient: {
-        height: 140,
+        height: 100,
     },
 });
 

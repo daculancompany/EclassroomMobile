@@ -23,18 +23,22 @@ import {
     Menu,
 } from 'react-native-paper';
 import useClassroomStore from '../../states/classroomState';
-import {StudentWork} from '../../components/';
+import {StudentWork, AssignmentItem} from '../../components/';
 import {useRoute} from '@react-navigation/native';
 import useClassworks from '../../hooks/useClassworks';
 import {formatDueDate, formatDate} from '../../utils/helper';
 import RenderHtml from 'react-native-render-html';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {globalStyles} from '../../globalStyles';
+import {useGlobalStyles} from '../../styles/globalStyles';
+import useClassworkSubmission from '../../hooks/useClassworkSubmission';
+import useGlobalStore from '../../states/globalState';
+import BottomSheet from '../BottomSheet';
 
 const ClassworksTab = () => {
+    const globalStyle = useGlobalStyles();
     const theme = useTheme();
     const {width} = useWindowDimensions();
-    const {setField} = useClassroomStore();
+    const {setField, studentSubmission} = useClassroomStore();
     const route = useRoute();
     const {class_id} = route.params || {};
     const {
@@ -51,6 +55,8 @@ const ClassworksTab = () => {
     const [termMenuVisible, setTermMenuVisible] = useState(false);
     const [typeMenuVisible, setTypeMenuVisible] = useState(false);
     const [dueMenuVisible, setDueMenuVisible] = useState(false);
+    const [classworkId, setClassworkId] = useState(null);
+    const [visible, setIsVisible] = useState(false);
 
     // Filter options
     const termOptions = [
@@ -133,428 +139,206 @@ const ClassworksTab = () => {
         setField('studentSubmission', true);
     };
 
+    const getFileIcon = type => {
+        const iconMap = {
+            pdf: 'file-pdf-box',
+            doc: 'file-word-box',
+            docx: 'file-word-box',
+            xls: 'file-excel-box',
+            xlsx: 'file-excel-box',
+            ppt: 'file-powerpoint-box',
+            pptx: 'file-powerpoint-box',
+            jpg: 'file-image',
+            jpeg: 'file-image',
+            png: 'file-image',
+            gif: 'file-image',
+            txt: 'file-document',
+            default: 'file',
+        };
+
+        return iconMap[type] || iconMap.default;
+    };
+
+    const getDueStatus = dueDate => {
+        if (!dueDate) return 'no-due';
+
+        const now = new Date();
+        const due = new Date(dueDate);
+
+        // Set up date ranges for comparison
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0); // Start of today
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999); // End of today
+        const oneWeekFromNow = new Date(
+            now.getTime() + 7 * 24 * 60 * 60 * 1000,
+        );
+
+        if (due < todayStart) return 'overdue';
+        if (due >= todayStart && due <= todayEnd) return 'due-today'; // Due today
+        if (due < oneWeekFromNow) return 'due-soon';
+        return 'not-due';
+    };
+
+    const baseStyle = {
+        color: theme.colors.text,
+        paddingHorizontal: 12,
+        fontSize: 16,
+        lineHeight: 24,
+    };
+
     const AssignmentItem = ({
         assignment,
         activePanels,
         handlePanelChange,
         handleSubmission,
     }) => {
-        const isActive = activePanels.includes(assignment.id);
-        const baseStyle = {
-            color: theme.colors.text,
-            paddingHorizontal: 12,
-            fontSize: 16,
-            lineHeight: 24,
-        };
+        //getDueStatus(assignment.due_date)
+        const dueStatus = 'due-soon';
 
-        const getFileIcon = type => {
-            const iconMap = {
-                pdf: 'file-pdf-box',
-                doc: 'file-word-box',
-                docx: 'file-word-box',
-                xls: 'file-excel-box',
-                xlsx: 'file-excel-box',
-                ppt: 'file-powerpoint-box',
-                pptx: 'file-powerpoint-box',
-                jpg: 'file-image',
-                jpeg: 'file-image',
-                png: 'file-image',
-                gif: 'file-image',
-                txt: 'file-document',
-                default: 'file',
-            };
-
-            return iconMap[type] || iconMap.default;
-        };
-
-        const getDueStatus = dueDate => {
-            if (!dueDate) return 'no-due';
-
-            const now = new Date();
-            const due = new Date(dueDate);
-
-            // Set up date ranges for comparison
-            const todayStart = new Date(now);
-            todayStart.setHours(0, 0, 0, 0); // Start of today
-            const todayEnd = new Date(now);
-            todayEnd.setHours(23, 59, 59, 999); // End of today
-            const oneWeekFromNow = new Date(
-                now.getTime() + 7 * 24 * 60 * 60 * 1000,
-            );
-
-            if (due < todayStart) return 'overdue';
-            if (due >= todayStart && due <= todayEnd) return 'due-today'; // Due today
-            if (due < oneWeekFromNow) return 'due-soon';
-            return 'not-due';
-        };
-
-        const dueStatus = getDueStatus(assignment.due_date);
-
-        const handleLinkPress = async url => {
-            const supported = await Linking.canOpenURL(url);
-            if (supported) {
-                await Linking.openURL(url);
-            }
-        };
+        // const handleLinkPress = async url => {
+        //     const supported = await Linking.canOpenURL(url);
+        //     if (supported) {
+        //         await Linking.openURL(url);
+        //     }
+        // };
 
         return (
-            <Card style={[styles.card, {marginBottom: 16}]}>
-                <Card.Content>
-                    <TouchableRipple
-                        onPress={() => handlePanelChange([assignment.id])}
-                        style={styles.headerRow}>
-                        <View style={styles.headerRowInner}>
-                            <View style={styles.titleWrapper}>
-                                <List.Icon
-                                    icon="clipboard-text"
-                                    color={theme.colors.primary}
-                                />
-                                <Text
-                                    variant="titleMedium"
-                                    style={styles.title}
-                                    numberOfLines={1}>
-                                    {assignment.title}
-                                </Text>
-                            </View>
-                            <View pointerEvents="none">
-                                <Icon
-                                    name={
-                                        isActive ? 'chevron-up' : 'chevron-down'
-                                    }
-                                    size={24}
-                                    color={theme.colors.text}
-                                />
-                            </View>
-                        </View>
-                    </TouchableRipple>
-
-                    <View style={styles.metaRow}>
-                        <View style={styles.typeChips}>
-                            <Chip
-                                icon="book"
-                                mode="outlined"
-                                style={[
-                                    styles.chip,
-                                    assignment?.term?.toLowerCase() ===
-                                    'midterm'
-                                        ? {
-                                              backgroundColor:
-                                                  theme.colors.primaryContainer,
-                                          }
-                                        : {
-                                              backgroundColor:
-                                                  theme.colors
-                                                      .secondaryContainer,
-                                          },
-                                ]}
-                                textStyle={styles.chipText}>
-                                {assignment?.term?.toUpperCase?.() || 'N/A'}
-                            </Chip>
-
-                            {assignment.type && (
-                                <Chip
-                                    icon="tag"
-                                    mode="outlined"
-                                    style={styles.chip}
-                                    textStyle={styles.chipText}>
-                                    {assignment?.type
-                                        ? typeOptions.find(
-                                              opt =>
-                                                  opt.value ===
-                                                  assignment?.type,
-                                          )?.label ||
-                                          assignment?.type.replace(/-/g, ' ')
-                                        : 'No Type'}
-                                </Chip>
-                            )}
-                            {dueStatus && (
-                                <Chip
-                                    icon={
-                                        dueStatus === 'overdue'
-                                            ? 'alert'
-                                            : dueStatus === 'due-today'
-                                            ? 'calendar-check'
-                                            : dueStatus === 'due-soon'
-                                            ? 'clock-alert'
-                                            : dueStatus === 'no-due'
-                                            ? 'calendar-remove'
-                                            : 'calendar'
-                                    }
-                                    mode="outlined"
-                                    style={[
-                                        styles.chip,
-                                        dueStatus === 'overdue' && {
-                                            backgroundColor:
-                                                theme.colors.errorContainer,
-                                        },
-                                        dueStatus === 'due-today' && {
-                                            backgroundColor:
-                                                theme.colors.primaryContainer,
-                                        },
-                                        dueStatus === 'due-soon' && {
-                                            backgroundColor:
-                                                theme.colors.tertiaryContainer,
-                                        },
-                                    ]}
-                                    textStyle={
-                                        dueStatus === 'overdue' && {
-                                            color: theme.colors.error,
-                                        }
-                                    }>
-                                    {dueStatus === 'overdue'
-                                        ? 'Overdue'
-                                        : dueStatus === 'due-today'
-                                        ? 'Due Today'
-                                        : dueStatus === 'due-soon'
-                                        ? 'Due Soon'
-                                        : dueStatus === 'no-due'
-                                        ? 'No Due Date'
-                                        : 'Not Due Yet'}
-                                </Chip>
-                            )}
-                            {/* <View style={{ alignItems: 'center', justifyContent: 'center' }} ><Text style={styles.dueDate}>
-                            {assignment.due_date ? formatDueDate(assignment.due_date) : 'No due date'}
-                        </Text></View> */}
-
-                            <Chip
-                                icon={
-                                    dueStatus === 'overdue'
-                                        ? 'alert'
-                                        : dueStatus === 'due-soon'
-                                        ? 'clock-alert'
-                                        : dueStatus === 'no-due'
-                                        ? 'calendar-remove'
-                                        : 'calendar'
-                                }
-                                mode="outlined"
-                                style={[
-                                    styles.chip,
-                                    dueStatus === 'overdue' && {
-                                        backgroundColor:
-                                            theme.colors.errorContainer,
-                                    },
-                                    dueStatus === 'due-soon' && {
-                                        backgroundColor:
-                                            theme.colors.tertiaryContainer,
-                                    },
-                                ]}
-                                textStyle={
-                                    dueStatus === 'overdue' && {
-                                        color: theme.colors.error,
-                                    }
-                                }>
-                                {assignment.due_date
-                                    ? formatDate(assignment.due_date)
-                                    : 'No due date'}
-                            </Chip>
-                            <Chip
-                                icon="star"
-                                mode="outlined"
-                                style={styles.chip}>
-                                {assignment.score}
-                                {assignment.score ? '/' : ''}
-                                {assignment.points_possible}
-                            </Chip>
-                        </View>
-
-                        {/* <View style={styles.dueDateWrapper}>
-                            <List.Icon icon="calendar" />
-                            <Text variant="bodySmall" style={styles.dueDate}>
-                                {assignment.due_date
-                                    ? formatDueDate(assignment.due_date)
-                                    : 'No due'}
-                            </Text>
-                        </View> */}
-                    </View>
-
-                    {isActive && (
-                        <ScrollView>
-                            {/* <View style={styles.pointsRow}>
-                                
-                            </View> */}
-
+            <>
+                <Card mode="contained" style={styles.instructionsCard}>
+                    <Card.Content>
+                        <View style={styles.titleWrapper}>
+                            <List.Icon
+                                icon="clipboard-text"
+                                color={theme.colors.primary}
+                            />
                             <Text
-                                variant="titleSmall"
-                                style={styles.sectionTitle}>
-                                Instructions
+                                variant="titleMedium"
+                                style={styles.title}
+                                numberOfLines={1}>
+                                {assignment.title}
                             </Text>
-                            <Card
+                        </View>
+                        <View style={styles.metaRow}></View>
+
+                        {/* <HtmlRendererWithSeeMore
+                            htmlContent={assignment?.instructions || ''}
+                            maxLines={3}
+                        /> */}
+                        {Array.isArray(assignment.attachment) &&
+                            assignment.attachment.length > 0 && (
+                                <>
+                                    <Text
+                                        variant="titleSmall"
+                                        style={styles.sectionTitle}>
+                                        Files
+                                    </Text>
+                                    <Card
+                                        mode="contained"
+                                        style={styles.attachmentsCard}>
+                                        {assignment.attachment.map(
+                                            (item, index) => (
+                                                <List.Item
+                                                    key={index}
+                                                    title={
+                                                        item?.file_name ||
+                                                        'File'
+                                                    }
+                                                    description="PDF file"
+                                                    left={props => (
+                                                        <List.Icon
+                                                            {...props}
+                                                            icon={getFileIcon(
+                                                                'pdf',
+                                                            )}
+                                                        />
+                                                    )}
+                                                    right={props => (
+                                                        <List.Icon
+                                                            {...props}
+                                                            icon="download"
+                                                        />
+                                                    )}
+                                                    onPress={() =>
+                                                        handleLinkPress(
+                                                            item?.file_link,
+                                                        )
+                                                    }
+                                                    style={styles.listItem}
+                                                />
+                                            ),
+                                        )}
+                                    </Card>
+                                </>
+                            )}
+
+                        {Array.isArray(assignment?.links) &&
+                            assignment?.links.length > 0 && (
+                                <>
+                                    <Text
+                                        variant="titleSmall"
+                                        style={styles.sectionTitle}>
+                                        Links
+                                    </Text>
+                                    <Card
+                                        mode="contained"
+                                        style={styles.linksCard}>
+                                        {assignment.links.map((item, index) => (
+                                            <List.Item
+                                                key={index}
+                                                title={item?.link}
+                                                left={props => (
+                                                    <List.Icon
+                                                        {...props}
+                                                        icon="link"
+                                                    />
+                                                )}
+                                                right={props => (
+                                                    <List.Icon
+                                                        {...props}
+                                                        icon="open-in-new"
+                                                    />
+                                                )}
+                                                onPress={() =>
+                                                    handleLinkPress(item?.link)
+                                                }
+                                                style={styles.listItem}
+                                                titleNumberOfLines={2}
+                                            />
+                                        ))}
+                                    </Card>
+                                </>
+                            )}
+
+                        <View style={styles.buttonRow}>
+                            <Button
                                 mode="contained"
-                                style={styles.instructionsCard}>
-                                <Card.Content>
-                                    <RenderHtml
-                                        contentWidth={width}
-                                        source={{
-                                            html:
-                                                assignment?.instructions || '',
-                                        }}
-                                        tagsStyles={{
-                                            body: baseStyle,
-                                            p: {
-                                                marginBottom: 12,
-                                                lineHeight: 22,
-                                                ...baseStyle,
-                                            },
-                                            h1: {
-                                                fontSize: 24,
-                                                fontWeight: 'bold',
-                                                marginVertical: 15,
-                                                color: theme.colors.text,
-                                            },
-                                            h2: {
-                                                fontSize: 20,
-                                                fontWeight: 'bold',
-                                                marginVertical: 12,
-                                                color: theme.colors.text,
-                                            },
-                                            h3: {
-                                                fontSize: 18,
-                                                fontWeight: '600',
-                                                marginVertical: 10,
-                                                color: theme.colors.text,
-                                            },
-                                            strong: {fontWeight: 'bold'},
-                                            em: {fontStyle: 'italic'},
-                                            u: {
-                                                textDecorationLine: 'underline',
-                                            },
-                                            ul: {marginBottom: 10},
-                                            ol: {marginBottom: 10},
-                                            li: {marginBottom: 5},
-                                            a: {
-                                                color: theme.colors.primary,
-                                                textDecorationLine: 'underline',
-                                            },
-                                        }}
-                                        baseStyle={{
-                                            paddingHorizontal: 10,
-                                            fontFamily: 'System',
-                                        }}
-                                        enableExperimentalBRCollapsing
-                                        enableExperimentalGhostLinesPrevention
-                                    />
-                                </Card.Content>
-                            </Card>
+                                icon="file-eye"
+                                onPress={() =>
+                                    handleSubmission(
+                                        assignment.slug,
+                                        assignment.title,
+                                        assignment.points_possible,
+                                    )
+                                }
+                                style={styles.button}
+                                contentStyle={styles.buttonContent}>
+                                View Work
+                            </Button>
 
-                            {Array.isArray(assignment.attachment) &&
-                                assignment.attachment.length > 0 && (
-                                    <>
-                                        <Text
-                                            variant="titleSmall"
-                                            style={styles.sectionTitle}>
-                                            Files
-                                        </Text>
-                                        <Card
-                                            mode="contained"
-                                            style={styles.attachmentsCard}>
-                                            {assignment.attachment.map(
-                                                (item, index) => (
-                                                    <List.Item
-                                                        key={index}
-                                                        title={
-                                                            item?.file_name ||
-                                                            'File'
-                                                        }
-                                                        description="PDF file"
-                                                        left={props => (
-                                                            <List.Icon
-                                                                {...props}
-                                                                icon={getFileIcon(
-                                                                    'pdf',
-                                                                )}
-                                                            />
-                                                        )}
-                                                        right={props => (
-                                                            <List.Icon
-                                                                {...props}
-                                                                icon="download"
-                                                            />
-                                                        )}
-                                                        onPress={() =>
-                                                            handleLinkPress(
-                                                                item?.file_link,
-                                                            )
-                                                        }
-                                                        style={styles.listItem}
-                                                    />
-                                                ),
-                                            )}
-                                        </Card>
-                                    </>
-                                )}
-
-                            {Array.isArray(assignment?.links) &&
-                                assignment?.links.length > 0 && (
-                                    <>
-                                        <Text
-                                            variant="titleSmall"
-                                            style={styles.sectionTitle}>
-                                            Links
-                                        </Text>
-                                        <Card
-                                            mode="contained"
-                                            style={styles.linksCard}>
-                                            {assignment.links.map(
-                                                (item, index) => (
-                                                    <List.Item
-                                                        key={index}
-                                                        title={item?.link}
-                                                        left={props => (
-                                                            <List.Icon
-                                                                {...props}
-                                                                icon="link"
-                                                            />
-                                                        )}
-                                                        right={props => (
-                                                            <List.Icon
-                                                                {...props}
-                                                                icon="open-in-new"
-                                                            />
-                                                        )}
-                                                        onPress={() =>
-                                                            handleLinkPress(
-                                                                item?.link,
-                                                            )
-                                                        }
-                                                        style={styles.listItem}
-                                                        titleNumberOfLines={2}
-                                                    />
-                                                ),
-                                            )}
-                                        </Card>
-                                    </>
-                                )}
-
-                            <View style={styles.buttonRow}>
+                            {assignment.status === 'draft' && (
                                 <Button
-                                    mode="contained"
-                                    icon="file-eye"
-                                    onPress={() =>
-                                        handleSubmission(
-                                            assignment.slug,
-                                            assignment.title,
-                                            assignment.points_possible,
-                                        )
-                                    }
+                                    mode="outlined"
+                                    icon="send"
                                     style={styles.button}
                                     contentStyle={styles.buttonContent}>
-                                    View Work
+                                    Publish
                                 </Button>
-
-                                {assignment.status === 'draft' && (
-                                    <Button
-                                        mode="outlined"
-                                        icon="send"
-                                        style={styles.button}
-                                        contentStyle={styles.buttonContent}>
-                                        Publish
-                                    </Button>
-                                )}
-                            </View>
-                        </ScrollView>
-                    )}
-                </Card.Content>
-            </Card>
+                            )}
+                        </View>
+                    </Card.Content>
+                </Card>
+            </>
         );
     };
 
@@ -574,14 +358,91 @@ const ClassworksTab = () => {
         setField('classwork_id', slug);
         setField('classwork_title', title);
         setField('classwork_points', points_possible);
+        setIsVisible(true);
     };
 
     const MemoizedAssignmentItem = React.memo(AssignmentItem);
 
+    const renderItem = ({item}) => (
+        <TouchableRipple
+            onPress={() =>
+                handleSubmission(item.slug, item.title, item.points_possible)
+            }
+            borderless={true}
+            style={globalStyle.assignmentCard}>
+            <View style={globalStyle.assignmentContent}>
+                <Text style={globalStyle.assignmentTitle}>{item.title}</Text>
+
+                <View style={globalStyle.assignmentDetailsRow}>
+                    <View style={globalStyle.assignmentDetailItem}>
+                        <Icon
+                            source="numeric"
+                            size={16}
+                            color={theme.colors.primary}
+                        />
+                        <Text style={globalStyle.assignmentDetailText}>
+                            {item.points_possible || 0} pts
+                        </Text>
+                    </View>
+
+                    {item.due_date && (
+                        <View style={globalStyle.assignmentDetailItem}>
+                            <Icon
+                                source="calendar-clock"
+                                size={16}
+                                color={theme.colors.primary}
+                            />
+                            <Text style={globalStyle.assignmentDetailText}>
+                                {new Date(item.due_date).toLocaleDateString()}
+                            </Text>
+                        </View>
+                    )}
+
+                    {item.submission_type && (
+                        <View style={styles.assignmentDetailItem}>
+                            <Icon
+                                source="file-upload"
+                                size={16}
+                                color={theme.colors.primary}
+                            />
+                            <Text style={styles.assignmentDetailText}>
+                                {item.submission_type}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                {item?.status && (
+                    <View style={styles.assignmentStatusBadge(status)}>
+                        <Text style={styles.assignmentStatusText}>
+                            {item?.status.charAt(0).toUpperCase() +
+                                item?.status.slice(1)}
+                        </Text>
+                    </View>
+                )}
+            </View>
+        </TouchableRipple>
+    );
+
     return (
         <>
-            <StudentWork />
-
+            <BottomSheet
+                heightPercentage={1}
+                visible={visible}
+                onDismiss={() => {
+                    setIsVisible(false);
+                }}>
+                <StudentWork class_id={class_id} />
+            </BottomSheet>
+            {/* <IconButton
+                icon="close"
+                size={20}
+                iconColor={'red'}
+                onPress={() => setIsVisible(true)}
+                style={{
+                    marginRight: 8,
+                }}
+            /> */}
             {/* Filter Controls */}
             <View style={styles.filterContainer}>
                 <Menu
@@ -680,46 +541,44 @@ const ClassworksTab = () => {
                     </Button>
                 )}
             </View>
-
             <FlatList
                 data={filteredClassworks || []}
                 keyExtractor={item => item.id.toString()}
-                renderItem={({item: assignment}) => (
-                    <MemoizedAssignmentItem
-                        assignment={assignment}
-                        activePanels={activePanels}
-                        handlePanelChange={handlePanelChange}
-                        handleSubmission={handleSubmission}
-                    />
-                )}
+                renderItem={renderItem}
+                // renderItem={({item: assignment}) => (
+                //     <AssignmentItem
+                //         assignment={assignment}
+                //         activePanels={activePanels}
+                //         handlePanelChange={handlePanelChange}
+                //         handleSubmission={handleSubmission}
+                //         getFileIcon={getFileIcon}
+                //         getDueStatus={getDueStatus}
+                //     />
+                // )}
                 ListEmptyComponent={
-                    isLoading ? (
-                        <ActivityIndicator animating={true} size="large" />
-                    ) : (
-                        <View style={styles.emptyContainer}>
-                            <Icon
-                                name="document-text-outline"
-                                size={48}
-                                color="#999"
-                            />
-                            <Text style={styles.emptyText}>
-                                {filterTerm || filterType || filterDueStatus
-                                    ? 'No assignments match your filters'
-                                    : 'No assignments found'}
-                            </Text>
-                            {!isLoading && (
-                                <Button
-                                    mode="contained-tonal"
-                                    onPress={() => refetch()}
-                                    style={styles.retryButton}>
-                                    Refresh
-                                </Button>
-                            )}
-                        </View>
-                    )
+                    <View style={styles.emptyContainer}>
+                        <Icon
+                            name="document-text-outline"
+                            size={48}
+                            color="#999"
+                        />
+                        <Text style={styles.emptyText}>
+                            {filterTerm || filterType || filterDueStatus
+                                ? 'No assignments match your filters'
+                                : 'No assignments found'}
+                        </Text>
+                        {!isLoading && (
+                            <Button
+                                mode="contained-tonal"
+                                onPress={() => refetch()}
+                                style={styles.retryButton}>
+                                Refresh
+                            </Button>
+                        )}
+                    </View>
                 }
                 contentContainerStyle={styles.listContent}
-                style={globalStyles.container}
+                style={globalStyle.container}
                 refreshControl={
                     <RefreshControl
                         refreshing={isFetching}
@@ -753,9 +612,6 @@ const ClassworksTab = () => {
 };
 
 const styles = StyleSheet.create({
-    card: {
-        overflow: 'hidden',
-    },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -872,6 +728,33 @@ const styles = StyleSheet.create({
     },
     retryButton: {
         marginTop: 8,
+    },
+
+    card: {
+        borderRadius: 8,
+        margin: 8,
+        overflow: 'hidden',
+        elevation: 2,
+    },
+    image: {
+        width: '100%',
+        height: 150,
+    },
+    content: {
+        padding: 16,
+    },
+    title: {
+        marginBottom: 12,
+    },
+    button: {
+        borderRadius: 4,
+    },
+    buttonContent: {
+        height: 44,
+    },
+    rippleContainer: {
+        borderRadius: 8, // Match your card's border radius
+        margin: 4, // Optional margin for the ripple effect
     },
 });
 

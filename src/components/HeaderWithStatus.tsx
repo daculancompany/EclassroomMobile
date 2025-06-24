@@ -4,6 +4,7 @@ import {View, StyleSheet} from 'react-native';
 import {IconButton, Chip} from 'react-native-paper';
 import {Text, useTheme} from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 
 const HeaderWithStatus = ({handleClose, status = 'assigned'}) => {
     const theme = useTheme();
@@ -15,10 +16,17 @@ const HeaderWithStatus = ({handleClose, status = 'assigned'}) => {
             padding: 16,
             borderBottomWidth: 1,
             borderBottomColor: theme.colors.border,
+            // position: 'absolute',
+            // zIndex: 9999,
+            // top: 0,
+            // left: 0,
+            // right: 0,
+            // marginTop: -80,
         },
         headerTitle: {
             fontSize: 20,
             fontWeight: 'bold',
+           
         },
     });
 

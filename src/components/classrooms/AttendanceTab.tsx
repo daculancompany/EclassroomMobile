@@ -9,19 +9,21 @@ import {
     Title,
     RadioButton,
     Button,
+    useTheme,
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import useClassroomAttendance from '../../hooks/useClassroomAttendance';
 import {useRoute} from '@react-navigation/native';
-import { formatDate } from '../../utils/helper';
-import { globalStyles } from '../../globalStyles'; 
+import {formatDate} from '../../utils/helper';
+import {useGlobalStyles} from '../../styles/globalStyles';
 
 const AttendanceTab = () => {
+    const globalStyle = useGlobalStyles();
+    const theme = useTheme();
     const route = useRoute();
     const {class_id} = route.params || {};
     const {data: attendance = [], isFetching} =
         useClassroomAttendance(class_id);
-    // ... other existing code ...
 
     const [termFilter, setTermFilter] = useState('all');
     // Initialize attendances as empty array if undefined
@@ -70,19 +72,35 @@ const AttendanceTab = () => {
         }
     };
 
-
     return (
         <ScrollView
-            style={globalStyles.container}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+            bouncesZoom={true}
+            keyboardShouldPersistTaps="handled"
+            style={globalStyle.container}
             contentContainerStyle={styles.scrollContent}>
             {/* Header Card */}
-            <Card style={styles.card}>
+            <Card
+                style={[styles.card, {backgroundColor: theme.colors.success}]}>
                 <List.Item
                     title="Today's Attendance"
                     description="Recorded at 9:45 AM"
                     left={props => <List.Icon {...props} icon="clock" />}
                 />
             </Card>
+            <View style={styles.filterContainer}>
+                <RadioButton.Group
+                    value={termFilter}
+                    onValueChange={value => setTermFilter(value)} // Immediate filter update
+                >
+                    <View style={styles.radioRow}>
+                        <RadioButton.Item label="All" value="all" />
+                        <RadioButton.Item label="Midterm" value="midterm" />
+                        <RadioButton.Item label="Final" value="final" />
+                    </View>
+                </RadioButton.Group>
+            </View>
 
             {/* Summary Section */}
             <Card style={[styles.card, styles.summaryCard]}>
@@ -113,30 +131,18 @@ const AttendanceTab = () => {
                     </View>
                 </View>
             </Card>
-
-            <View style={styles.filterContainer}>
-                <RadioButton.Group
-                    value={termFilter}
-                    onValueChange={value => setTermFilter(value)} // Immediate filter update
-                >
-                    <View style={styles.radioRow}>
-                        <RadioButton.Item label="All" value="all" />
-                        <RadioButton.Item label="Midterm" value="midterm" />
-                        <RadioButton.Item label="Final" value="final" />
-                    </View>
-                </RadioButton.Group>
-            </View>
-
             {/* Attendance Table */}
             <DataTable style={styles.table}>
                 <DataTable.Header>
-                    <DataTable.Title>Date</DataTable.Title>
+                    <DataTable.Title>Date & Time</DataTable.Title>
                     <DataTable.Title>Status</DataTable.Title>
                 </DataTable.Header>
 
-                {/* {filteredAttendances.map((record, index) => (
+                {filteredAttendances.map((record, index) => (
                     <DataTable.Row key={index}>
-                        <DataTable.Cell>{record.date}</DataTable.Cell>
+                        <DataTable.Cell style={styles.dateTime}>
+                            {formatDate(record.date_time, true)}
+                        </DataTable.Cell>
                         <DataTable.Cell style={styles[`${record.status}Cell`]}>
                             <View style={styles.statusContainer}>
                                 {getStatusIcon(record.status)}
@@ -148,18 +154,16 @@ const AttendanceTab = () => {
                             </View>
                         </DataTable.Cell>
                     </DataTable.Row>
-                ))} */}
+                ))}
 
-                {attendanceDates.map((record, index) => (
+                {/* {attendanceDates.map((record, index) => (
                     <DataTable.Row key={index}>
                         <DataTable.Cell>  {formatDate(record)}</DataTable.Cell>
                         <DataTable.Cell>
                             12-04-2024
                         </DataTable.Cell>
                     </DataTable.Row>
-                ))}
-
-                
+                ))} */}
             </DataTable>
         </ScrollView>
     );
@@ -214,6 +218,9 @@ const styles = StyleSheet.create({
     statusContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        textAlign: 'center',
+        flex: 1,
+        justifyContent: 'center',
     },
     statusText: {
         marginLeft: 8,
@@ -240,6 +247,9 @@ const styles = StyleSheet.create({
     filterButton: {
         marginLeft: 16,
         borderRadius: 4,
+    },
+    dateTime: {
+        textAlign: 'left',
     },
 });
 

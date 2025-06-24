@@ -14,7 +14,6 @@ import useGlobalStore from '../../states/globalState';
 const FileViewerModal = () => {
     const theme = useTheme();
     const {fileViewer, setField} = useGlobalStore();
-    console.log({fileViewer});
     if (!fileViewer?.url) {
         return null;
     }

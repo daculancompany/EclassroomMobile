@@ -36,6 +36,7 @@ import {TextComponent} from '../components';
 import useClassroom from '../hooks/useClassroom';
 import {Item} from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 import dayjs from 'dayjs';
+import {DEFAULT_BANNER, HERO_IMAGE} from '../utils/constant';
 
 const ClassroomListScreen = () => {
     const theme = useTheme();
@@ -46,65 +47,7 @@ const ClassroomListScreen = () => {
     const [buildingFilter, setBuildingFilter] = useState(null);
     const {data: classrooms, isFetching, isLoading, refetch} = useClassroom();
 
-    // const classrooms = [
-    //     {
-    //         id: '1',
-    //         name: 'Computer Lab 101',
-    //         capacity: 30,
-    //         building: 'Tech Building',
-    //         floor: '1st Floor',
-    //     },
-    //     {
-    //         id: '2',
-    //         name: 'Programming Lab',
-    //         capacity: 25,
-    //         building: 'Main Building',
-    //         floor: '3rd Floor',
-    //     },
-    //     {
-    //         id: '3',
-    //         name: 'Network Lab',
-    //         capacity: 20,
-    //         building: 'Tech Building',
-    //         floor: '2nd Floor',
-    //     },
-    //     {
-    //         id: '4',
-    //         name: 'Multimedia Room',
-    //         capacity: 15,
-    //         building: 'Arts Building',
-    //         floor: 'Ground Floor',
-    //     },
-    //     {
-    //         id: '5',
-    //         name: 'Lecture Hall A',
-    //         capacity: 50,
-    //         building: 'Main Building',
-    //         floor: '1st Floor',
-    //     },
-    //     {
-    //         id: '6',
-    //         name: 'Lecture Hall B',
-    //         capacity: 50,
-    //         building: 'Main Building',
-    //         floor: '1st Floor',
-    //     },
-    //     {
-    //         id: '7',
-    //         name: 'Lecture Hall C',
-    //         capacity: 50,
-    //         building: 'Main Building',
-    //         floor: '1st Floor',
-    //     },
-    //     {
-    //         id: '8',
-    //         name: 'Lecture Hall D',
-    //         capacity: 50,
-    //         building: 'Main Building',
-    //         floor: '1st Floor',
-    //     },
-    // ];
-    //...new Set(classrooms.map(item => item.building))
+
     const buildings = [];
 
     const filteredClassrooms =
@@ -140,97 +83,8 @@ const ClassroomListScreen = () => {
         setSearchQuery('');
     };
 
-    // const renderItem2 = ({item}) => (
-    //     <LinearGradient
-    //         colors={['rgba(255, 0, 255, 0.7)', 'rgba(59, 245, 245, 0.7)']}
-    //         start={{x: 0, y: 0}}
-    //         end={{x: 1, y: 1}}
-    //         style={{
-    //             borderRadius: 12,
-    //             padding: 2,
-    //             paddingLeft: 7,
-    //             // paddingBottom: 7,
-    //             margin: 5,
-    //             // opacity: 0.9,
-    //         }}>
-    //         <Card elevation={4}>
-    //             <TouchableRipple
-    //                 onPress={() => navigation.navigate('ClassroomDetails')}>
-    //                 <Card.Content style={styles.cardContent}>
-    //                     <ImageBackground
-    //                         source={{
-    //                             uri: 'https://images.unsplash.com/photo-1519406596751-0a3ccc4937fe?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    //                         }}
-    //                         style={styles.cardImage}
-    //                         resizeMode="cover"></ImageBackground>
-    //                     <View style={styles.cardHeader}>
-    //                         <Ionicons
-    //                             name="desktop-outline"
-    //                             size={20}
-    //                             color={theme.colors.primary}
-    //                         />
-    //                         <Text
-    //                             variant="titleMedium"
-    //                             style={styles.classroomName}>
-    //                             {item.name}
-    //                         </Text>
-    //                     </View>
-
-    //                     <View style={styles.cardDetails}>
-    //                         <Paragraph style={styles.cardText}>
-    //                             <MaterialIcons name="class" size={16} />{' '}
-    //                             <Text style={styles.boldText}>Class:</Text>{' '}
-    //                             <Text style={styles.className}>
-    //                                 {item.class_name}
-    //                             </Text>{' '}
-    //                             - Section {item.section}
-    //                         </Paragraph>
-    //                         <View style={styles.detailRow}>
-    //                             <Ionicons
-    //                                 name="people-outline"
-    //                                 size={16}
-    //                                 color={theme.colors.onSurfaceVariant}
-    //                             />
-    //                             <Text
-    //                                 variant="bodyMedium"
-    //                                 style={styles.detailText}>
-    //                                 Capacity: {item.capacity}
-    //                             </Text>
-    //                         </View>
-
-    //                         <View style={styles.detailRow}>
-    //                             <Ionicons
-    //                                 name="business-outline"
-    //                                 size={16}
-    //                                 color={theme.colors.onSurfaceVariant}
-    //                             />
-    //                             <Text
-    //                                 variant="bodyMedium"
-    //                                 style={styles.detailText}>
-    //                                 {item.building}
-    //                             </Text>
-    //                         </View>
-
-    //                         <View style={styles.detailRow}>
-    //                             <Ionicons
-    //                                 name="layers-outline"
-    //                                 size={16}
-    //                                 color={theme.colors.onSurfaceVariant}
-    //                             />
-    //                             <Text
-    //                                 variant="bodyMedium"
-    //                                 style={styles.detailText}>
-    //                                 {item.floor}
-    //                             </Text>
-    //                         </View>
-    //                     </View>
-    //                 </Card.Content>
-    //             </TouchableRipple>
-    //         </Card>
-    //     </LinearGradient>
-    // );
-
-    const renderItem = ({item}) => (
+ 
+    const renderItem = ({item}) => ( 
         <Card style={styles.card}>
             <TouchableRipple
                 onPress={() =>
@@ -241,7 +95,9 @@ const ClassroomListScreen = () => {
                 <>
                     <ImageBackground
                         source={{
-                            uri: 'https://images.unsplash.com/photo-1519406596751-0a3ccc4937fe?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+                            uri: item?.hero_image
+                                ? HERO_IMAGE + item?.hero_image
+                                : DEFAULT_BANNER,
                         }}
                         style={styles.cardImage}
                         resizeMode="cover">

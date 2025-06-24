@@ -1,0 +1,178 @@
+//@ts-nocheck
+import React, {useRef, useState, useEffect} from 'react';
+import {
+    View,
+    StyleSheet,
+    Dimensions,
+    TouchableWithoutFeedback,
+    Keyboard,
+    SafeAreaView,
+    Animated,
+} from 'react-native';
+import {Portal, Modal, useTheme, IconButton} from 'react-native-paper';
+import {PanGestureHandler, State} from 'react-native-gesture-handler';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const MODAL_HEIGHT = SCREEN_HEIGHT - 20;
+
+const useStyles = () => {
+    const theme = useTheme();
+
+    return StyleSheet.create({
+        modal: {
+            margin: 0,
+            justifyContent: 'flex-end',
+        },
+        backdrop: {
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+        },
+        container: {
+            backgroundColor: theme.colors.background,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            overflow: 'hidden',
+        },
+        safeArea: {
+            flex: 1,
+        },
+        header: {
+            paddingVertical: 10,
+            alignItems: 'center',
+            backgroundColor: theme.colors.surfaceVariant,
+        },
+        dragHandle: {
+            width: 40,
+            height: 5,
+            backgroundColor: theme.colors.onSurfaceVariant,
+            borderRadius: 5,
+            opacity: 0.6,
+        },
+        contentContainer: {
+            flex: 1,
+        },
+        appContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: theme.colors.background,
+        },
+    });
+};
+
+const BottomSheet = ({
+    show,
+    children,
+    enablePanGesture = true,
+    showDragHandle = true,
+}) => {
+    const styles = useStyles();
+    const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const panGestureRef = useRef();
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        Animated[visible ? 'spring' : 'timing'](translateY, {
+            toValue: visible ? 0 : SCREEN_HEIGHT,
+            duration: 250,
+            useNativeDriver: true,
+            damping: 20,
+        }).start();
+    }, [visible]);
+
+    useEffect(() => {
+        const showSub = Keyboard.addListener('keyboardDidShow', e => {
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardHeight(0);
+        });
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+
+    const onGestureEvent = Animated.event(
+        [{nativeEvent: {translationY: translateY}}],
+        {useNativeDriver: true},
+    );
+
+    const onHandlerStateChange = event => {
+        if (event.nativeEvent.oldState === State.ACTIVE) {
+            const {translationY} = event.nativeEvent;
+            if (translationY > 100 && enablePanGesture) {
+                Animated.timing(translateY, {
+                    toValue: SCREEN_HEIGHT,
+                    duration: 250,
+                    useNativeDriver: true,
+                }).start(onDismiss);
+            } else {
+                Animated.spring(translateY, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                    damping: 20,
+                }).start();
+            }
+        }
+    };
+
+    const onDismiss = () => {
+        setVisible(false)
+    }
+
+    return (
+        <View style={styles.appContainer}>
+            <IconButton
+                icon="message"
+                size={40}
+                onPress={() => setVisible(true)}
+                style={styles.openButton}
+            />
+            <Portal>
+                <Modal
+                    visible={visible}
+                    onDismiss={() => setVisible(false)}
+                    style={styles.modal}>
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.backdrop} />
+                    </TouchableWithoutFeedback>
+
+                    <PanGestureHandler
+                        ref={panGestureRef}
+                        onGestureEvent={onGestureEvent}
+                        onHandlerStateChange={onHandlerStateChange}
+                        activeOffsetY={10}
+                        enabled={enablePanGesture}>
+                        <Animated.View
+                            style={[
+                                styles.container,
+                                {
+                                    height:
+                                        keyboardHeight > 0
+                                            ? SCREEN_HEIGHT - keyboardHeight
+                                            : MODAL_HEIGHT,
+                                    transform: [{translateY}],
+                                },
+                            ]}>
+                            <SafeAreaView style={styles.safeArea}>
+                                {showDragHandle && (
+                                    <View style={styles.header}>
+                                        <View style={styles.dragHandle} />
+                                    </View>
+                                )}
+                                <View style={styles.contentContainer}>
+                                    {children}
+                                </View>
+                            </SafeAreaView>
+                        </Animated.View>
+                    </PanGestureHandler>
+                </Modal>
+            </Portal>
+        </View>
+    );
+};
+
+export default BottomSheet;

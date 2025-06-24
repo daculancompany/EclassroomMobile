@@ -35,13 +35,19 @@ import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import CamerCapture from '../CamerCapture';
 import HeaderWithStatus from '../HeaderWithStatus';
 import useGlobalStore from '../../states/globalState';
-import { DIR_LOCATION } from '../../utils/constant';
+import {DIR_LOCATION} from '../../utils/constant';
+import PrivateMessage from './PrivateMessage';
+import {
+    TabsProvider,
+    Tabs,
+    TabScreen,
+    useTabIndex,
+    useTabNavigation,
+} from 'react-native-paper-tabs';
 
 const StudentWork = () => {
     const theme = useTheme();
-    const route = useRoute();
-     const { fileViewer, setField: setFieldGlobal } = useGlobalStore();
-    const {class_id} = route.params || {};
+    const {fileViewer, setField: setFieldGlobal} = useGlobalStore();
     const {
         studentSubmission,
         setField,
@@ -77,6 +83,7 @@ const StudentWork = () => {
     const [submitLink, setSubmitLink] = useState(false);
     const [visible, setVisible] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
+    const [isActive, setIsActive] = useState(false);
 
     const {
         isLoading,
@@ -84,12 +91,6 @@ const StudentWork = () => {
         refetch,
         isFetching,
     } = useClassworkSubmission(classwork_id, studentSubmission);
-
-    // useEffect(() => {
-    //     if (studentSubmission) {
-    //         refetch();
-    //     }
-    // }, [studentSubmission]);
 
     const handleAddLink = async () => {
         setSubmitLink(true);
@@ -181,7 +182,7 @@ const StudentWork = () => {
             backgroundColor: theme.colors.surface,
             padding: 0,
             margin: 0,
-            height: '90%',
+            height: '100%',
             width: '100%',
             position: 'absolute',
             bottom: 0,
@@ -364,44 +365,6 @@ const StudentWork = () => {
         }
     };
 
-    const uploadImage333 = async uri => {
-        const response = await storeStudentSubmission({
-            classwork_id: classwork_id,
-            type: 'image',
-            file: {
-                uri: file.uri,
-                name: file.fileName || `image_${Date.now()}.jpg`,
-                type: file.type || 'image/jpeg',
-            },
-        });
-        console.log('response  --->', response);
-        // try {
-        //     const formData = new FormData();
-        //     formData.append('file', {
-        //         uri,
-        //         type: 'image/jpeg', // or get mime type dynamically
-        //         name: 'upload.jpg',
-        //     });
-
-        //     const response = await axios.post(
-        //         'YOUR_UPLOAD_ENDPOINT',
-        //         formData,
-        //         {
-        //             headers: {
-        //                 'Content-Type': 'multipart/form-data',
-        //                 // Add any auth headers if needed
-        //             },
-        //         },
-        //     );
-
-        //     console.log('Upload success:', response.data);
-        //     Alert.alert('Success', 'Image uploaded successfully');
-        // } catch (error) {
-        //     console.error('Upload error:', error);
-        //     Alert.alert('Error', 'Failed to upload image');
-        // }
-    };
-
     const getFileIcon = ext => {
         switch (ext) {
             case 'pdf':
@@ -432,409 +395,258 @@ const StudentWork = () => {
         }
     };
 
-    //sreturn (<><CamesssrCapture  onImageCapture={(path) => console.log(path)} /></>)
+    const currentUser = {
+        id: 2,
+        name: 'John Doe',
+        role: 'student', // or 'faculty'
+        email: 'student@university.edu',
+        color: '#52c41a',
+    };
 
+    const otherUser = {
+        id: 1,
+        name: 'Dr. Smith',
+        role: 'faculty', // or 'student'
+        email: 'prof@university.edu',
+    };
+
+    const classworkId = 10; // Get from your router or props
     return (
-        <Portal>
-            <Modal
-                visible={visible}
-                onDismiss={() => setVisible(false)}
-                contentContainerStyle={[
-                    styles.modalContainer,
-                    {backgroundColor: theme.colors.surface},
-                ]}>
-                <View style={styles.linkInputContainer}>
-                    <Text>Add Link</Text>
-                    <PaperTextInput
-                        label="Link URL"
-                        value={currentLink}
-                        onChangeText={setCurrentLink}
-                        style={styles.linkInput}
-                        left={<PaperTextInput.Icon name="paperclip" />}
-                    />
-                    <Button
-                        loading={submitLink}
-                        mode="contained"
-                        onPress={handleAddLink}
-                        disabled={!currentLink.trim() || submitLink}
-                        style={styles.addLinkButton}>
-                        Add Link
-                    </Button>
-                </View>
-            </Modal>
-            <Modal
-                visible={studentSubmission}
-                onDismiss={handleClose}
-                contentContainerStyle={dynamicStyles.modalContainer}>
-                <SafeAreaView style={dynamicStyles.container}>
-                    <HeaderWithStatus
-                        handleClose={handleClose}
-                        status="assigned"
-                    />
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={styles.keyboardAvoidingView}>
-                        <ScrollView style={styles.scrollView}>
-                            <View>
-                                {/* Left Column - Comments */}
-                                <View style={styles.leftColumn}>
-                                    <Card style={dynamicStyles.card}>
-                                        <Card.Title
-                                            title="Assignment Submission"
-                                            titleStyle={{
-                                                color: theme.colors.text,
-                                            }}
-                                            // right={() => (
-                                            //     <> <Text>Assigned</Text> </>
-                                            // )}
-                                        />
-                                        <Card.Content style={styles.btnCreate}>
-                                            <View style={{width: '98%'}}>
-                                                {Array.isArray(classworks) &&
-                                                    classworks.length > 0 && (
-                                                        <List.Section
-                                                            title="Classwork Links"
-                                                            titleStyle={{
-                                                                fontWeight:
-                                                                    'bold',
-                                                            }}>
-                                                            {classworks.map(
-                                                                link => (
-                                                                    <List.Item
-                                                                        key={
-                                                                            link.id
-                                                                        }
-                                                                        title={
-                                                                            link.file_link
-                                                                        }
-                                                                        description={(
-                                                                            link?.type ||
-                                                                            ''
-                                                                        ).toUpperCase()}
-                                                                        titleNumberOfLines={
-                                                                            1
-                                                                        }
-                                                                        descriptionNumberOfLines={
-                                                                            1
-                                                                        }
-                                                                        left={props => (
-                                                                            <List.Icon
-                                                                                {...props}
-                                                                                icon={getFileIcon(
-                                                                                    link.ext,
-                                                                                )}
-                                                                                color={getFileColor(
-                                                                                    link.ext,
-                                                                                )}
-                                                                            />
-                                                                        )}
-                                                                        right={() => (
-                                                                            <IconButton
-                                                                                icon="close"
-                                                                                size={
-                                                                                    20
-                                                                                }
-                                                                                iconColor={
-                                                                                    MD3Colors.error50
-                                                                                }
-                                                                                onPress={() =>
-                                                                                    handleRemoveLink(
-                                                                                        link.id,
-                                                                                    )
-                                                                                }
-                                                                                style={{
-                                                                                    marginRight: 8,
-                                                                                }}
-                                                                            />
-                                                                        )}
-                                                                        onPress={() =>
-                                                                        {
-                                                                            setField('studentSubmission', false);
-                                                                            setFieldGlobal('fileViewer', { visible: true, url:   link.type === 'link' ? link.file_link : DIR_LOCATION.submission +  link.file_link})
-                                                                        }
-                                                                           
-                                                                        }
-                                                                        style={{
-                                                                            paddingVertical: 8,
-                                                                        }}
-                                                                    />
-                                                                ),
-                                                            )}
-                                                        </List.Section>
-                                                    )}
-                                            </View>
-                                            <Menu
-                                                visible={menuVisible}
-                                                onDismiss={() =>
-                                                    setMenuVisible(false)
-                                                }
-                                                anchor={
-                                                    <Button
-                                                        icon="plus"
-                                                        mode="outlined"
-                                                        onPress={() =>
-                                                            setMenuVisible(true)
+        <TabsProvider defaultIndex={0}>
+            <Tabs mode="scrollable">
+                  <TabScreen label="Instruction ">
+                    <ScrollView style={styles.scrollView}>
+                      
+                    </ScrollView>
+                </TabScreen>
+                <TabScreen label="Submission ">
+                    <ScrollView style={styles.scrollView}>
+                        <Card style={[dynamicStyles.card, {margin: 15}]}>
+                            <Card.Title
+                                title="Assignment Submission"
+                                titleStyle={{
+                                    color: theme.colors.text,
+                                }}
+                                // right={() => (
+                                //     <> <Text>Assigned</Text> </>
+                                // )}
+                            />
+                            <Card.Content style={styles.btnCreate}>
+                                <View style={{width: '98%'}}>
+                                    {Array.isArray(classworks) &&
+                                        classworks.length > 0 && (
+                                            <List.Section
+                                                title="Classwork Links"
+                                                titleStyle={{
+                                                    fontWeight: 'bold',
+                                                }}>
+                                                {classworks.map(link => (
+                                                    <List.Item
+                                                        key={link.id}
+                                                        title={link.file_link}
+                                                        description={(
+                                                            link?.type || ''
+                                                        ).toUpperCase()}
+                                                        titleNumberOfLines={1}
+                                                        descriptionNumberOfLines={
+                                                            1
                                                         }
-                                                        style={
-                                                            styles.uploadButton
-                                                        }>
-                                                        Add or Create
-                                                    </Button>
-                                                }>
-                                                <Menu.Item
-                                                    onPress={() => {
-                                                        setMenuVisible(false);
-                                                        handleImageUpload();
-                                                    }}
-                                                    title="File(jpg,png,pdf)"
-                                                    leadingIcon="file-upload"
-                                                />
-                                                <Menu.Item
-                                                    onPress={() => {
-                                                        setMenuVisible(false);
-                                                        setField(
-                                                            'studentSubmission',
-                                                            false,
-                                                        );
-                                                        setVisible(true);
-                                                    }}
-                                                    title="Link"
-                                                    leadingIcon="link"
-                                                />
-                                            </Menu>
-                                        </Card.Content>
-                                    </Card>
-
-                                    <Card style={dynamicStyles.card}>
-                                        <Card.Title
-                                            title="Private Comments (for instructor only)"
-                                            titleStyle={{
-                                                color: theme.colors.text,
-                                            }}
-                                        />
-                                        <Card.Content>
-                                            <PaperTextInput
-                                                multiline
-                                                numberOfLines={3}
-                                                value={privateComment}
-                                                onChangeText={setPrivateComment}
-                                                placeholder="Add a private comment for your instructor..."
-                                                style={styles.commentInput}
-                                                theme={{
-                                                    colors: {
-                                                        text: theme.colors.text,
-                                                        placeholder:
-                                                            theme.colors.text,
-                                                        primary:
-                                                            theme.colors
-                                                                .primary,
-                                                        background:
-                                                            'transparent',
-                                                    },
-                                                }}
-                                            />
-                                            <Button
-                                                icon="send"
-                                                onPress={handlePrivateComment}
-                                                style={styles.commentButton}>
-                                                Send Private Comment
-                                            </Button>
-
-                                            <Divider style={styles.divider} />
-
-                                            <List.Section>
-                                                {comments
-                                                    .filter(c => c.isPrivate)
-                                                    .map(item => (
-                                                        <List.Item
-                                                            key={item.id}
-                                                            title={item.content}
-                                                            titleStyle={{
-                                                                color: theme
-                                                                    .colors
-                                                                    .text,
-                                                            }}
-                                                            description={`${item.author} • ${item.datetime}`}
-                                                            descriptionStyle={{
-                                                                color: theme
-                                                                    .colors
-                                                                    .text,
-                                                            }}
-                                                            left={() =>
-                                                                item.avatar ? (
-                                                                    <Avatar.Image
-                                                                        source={{
-                                                                            uri: item.avatar,
-                                                                        }}
-                                                                        size={
-                                                                            40
-                                                                        }
-                                                                    />
-                                                                ) : (
-                                                                    <Avatar.Icon
-                                                                        icon="account"
-                                                                        size={
-                                                                            40
-                                                                        }
-                                                                        color={
-                                                                            theme
-                                                                                .colors
-                                                                                .text
-                                                                        }
-                                                                    />
-                                                                )
-                                                            }
-                                                            style={
-                                                                styles.commentItem
-                                                            }
-                                                        />
-                                                    ))}
+                                                        left={props => (
+                                                            <List.Icon
+                                                                {...props}
+                                                                icon={getFileIcon(
+                                                                    link.ext,
+                                                                )}
+                                                                color={getFileColor(
+                                                                    link.ext,
+                                                                )}
+                                                            />
+                                                        )}
+                                                        right={() => (
+                                                            <IconButton
+                                                                icon="close"
+                                                                size={20}
+                                                                iconColor={
+                                                                    MD3Colors.error50
+                                                                }
+                                                                onPress={() =>
+                                                                    handleRemoveLink(
+                                                                        link.id,
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    marginRight: 8,
+                                                                }}
+                                                            />
+                                                        )}
+                                                        onPress={() => {
+                                                            setField(
+                                                                'studentSubmission',
+                                                                false,
+                                                            );
+                                                            setFieldGlobal(
+                                                                'fileViewer',
+                                                                {
+                                                                    visible:
+                                                                        true,
+                                                                    url:
+                                                                        link.type ===
+                                                                        'link'
+                                                                            ? link.file_link
+                                                                            : DIR_LOCATION.submission +
+                                                                              link.file_link,
+                                                                },
+                                                            );
+                                                        }}
+                                                        style={{
+                                                            paddingVertical: 8,
+                                                        }}
+                                                    />
+                                                ))}
                                             </List.Section>
+                                        )}
+                                </View>
+                                <Menu
+                                    visible={menuVisible}
+                                    onDismiss={() => setMenuVisible(false)}
+                                    anchor={
+                                        <Button
+                                            icon="plus"
+                                            mode="outlined"
+                                            onPress={() => setMenuVisible(true)}
+                                            style={styles.uploadButton}>
+                                            Add or Create
+                                        </Button>
+                                    }>
+                                    <Menu.Item
+                                        onPress={() => {
+                                            setMenuVisible(false);
+                                            handleImageUpload();
+                                        }}
+                                        title="File(jpg,png,pdf)"
+                                        leadingIcon="file-upload"
+                                    />
+                                    <Menu.Item
+                                        onPress={() => {
+                                            setMenuVisible(false);
+                                            setField(
+                                                'studentSubmission',
+                                                false,
+                                            );
+                                            setVisible(true);
+                                        }}
+                                        title="Link"
+                                        leadingIcon="link"
+                                    />
+                                </Menu>
+                            </Card.Content>
+                        </Card>
+                    </ScrollView>
+                </TabScreen>
+                <TabScreen label="Private Message">
+                    <PrivateMessage
+                        classworkId={classworkId}
+                        currentUser={currentUser}
+                        otherUser={otherUser}
+                        isActive={isActive}
+                    />
+                </TabScreen>
+                <TabScreen label="Class Comments">
+                    <View style={styles.rightColumn}>
+                        <List.Section>
+                            {comments
+                                .filter(c => !c.isPrivate)
+                                .map(item => (
+                                    <Card
+                                        key={item.id}
+                                        style={dynamicStyles.card}>
+                                        <Card.Content>
+                                            <View style={styles.commentHeader}>
+                                                {item.avatar ? (
+                                                    <Avatar.Image
+                                                        source={{
+                                                            uri: item.avatar,
+                                                        }}
+                                                        size={40}
+                                                    />
+                                                ) : (
+                                                    <Avatar.Icon
+                                                        icon="account"
+                                                        size={40}
+                                                        color={
+                                                            theme.colors.text
+                                                        }
+                                                    />
+                                                )}
+                                                <View
+                                                    style={styles.commentMeta}>
+                                                    <Text
+                                                        style={
+                                                            dynamicStyles.commentAuthor
+                                                        }>
+                                                        {item.author}
+                                                    </Text>
+                                                    <Text
+                                                        style={
+                                                            dynamicStyles.commentTime
+                                                        }>
+                                                        {item.datetime}
+                                                    </Text>
+                                                </View>
+                                                {item.isPrivate && (
+                                                    <Chip
+                                                        icon="lock"
+                                                        style={
+                                                            styles.privateChip
+                                                        }
+                                                        textStyle={{
+                                                            color: theme.colors
+                                                                .text,
+                                                        }}>
+                                                        Private
+                                                    </Chip>
+                                                )}
+                                            </View>
+                                            <Text
+                                                style={
+                                                    dynamicStyles.commentContent
+                                                }>
+                                                {item.content}
+                                            </Text>
                                         </Card.Content>
                                     </Card>
-                                </View>
-                                {/* Right Column - Class Comments */}
-                                <View style={styles.rightColumn}>
-                                    <Text style={dynamicStyles.sectionTitle}>
-                                        Class Comments
-                                    </Text>
-                                    <List.Section>
-                                        {comments
-                                            .filter(c => !c.isPrivate)
-                                            .map(item => (
-                                                <Card
-                                                    key={item.id}
-                                                    style={dynamicStyles.card}>
-                                                    <Card.Content>
-                                                        <View
-                                                            style={
-                                                                styles.commentHeader
-                                                            }>
-                                                            {item.avatar ? (
-                                                                <Avatar.Image
-                                                                    source={{
-                                                                        uri: item.avatar,
-                                                                    }}
-                                                                    size={40}
-                                                                />
-                                                            ) : (
-                                                                <Avatar.Icon
-                                                                    icon="account"
-                                                                    size={40}
-                                                                    color={
-                                                                        theme
-                                                                            .colors
-                                                                            .text
-                                                                    }
-                                                                />
-                                                            )}
-                                                            <View
-                                                                style={
-                                                                    styles.commentMeta
-                                                                }>
-                                                                <Text
-                                                                    style={
-                                                                        dynamicStyles.commentAuthor
-                                                                    }>
-                                                                    {
-                                                                        item.author
-                                                                    }
-                                                                </Text>
-                                                                <Text
-                                                                    style={
-                                                                        dynamicStyles.commentTime
-                                                                    }>
-                                                                    {
-                                                                        item.datetime
-                                                                    }
-                                                                </Text>
-                                                            </View>
-                                                            {item.isPrivate && (
-                                                                <Chip
-                                                                    icon="lock"
-                                                                    style={
-                                                                        styles.privateChip
-                                                                    }
-                                                                    textStyle={{
-                                                                        color: theme
-                                                                            .colors
-                                                                            .text,
-                                                                    }}>
-                                                                    Private
-                                                                </Chip>
-                                                            )}
-                                                        </View>
-                                                        <Text
-                                                            style={
-                                                                dynamicStyles.commentContent
-                                                            }>
-                                                            {item.content}
-                                                        </Text>
-                                                    </Card.Content>
-                                                </Card>
-                                            ))}
-                                    </List.Section>
+                                ))}
+                        </List.Section>
 
-                                    <Divider style={styles.divider} />
+                        <Divider style={styles.divider} />
 
-                                    <PaperTextInput
-                                        multiline
-                                        numberOfLines={3}
-                                        value={newComment}
-                                        onChangeText={setNewComment}
-                                        placeholder="Add a class comment..."
-                                        style={styles.commentInput}
-                                        theme={{
-                                            colors: {
-                                                text: theme.colors.text,
-                                                placeholder: theme.colors.text,
-                                                primary: theme.colors.primary,
-                                                background: 'transparent',
-                                            },
-                                        }}
-                                    />
-                                    <Button
-                                        icon="comment"
-                                        mode="contained"
-                                        onPress={handlePublicComment}
-                                        style={styles.commentButton}>
-                                        Post to Class
-                                    </Button>
-                                </View>
-                            </View>
-                        </ScrollView>
-                    </KeyboardAvoidingView>
-                    {/* New footer with action buttons */}
-                    {/* <View
-                        style={[
-                            styles.modalFooter,
-                            {
-                                backgroundColor: theme.colors.surface,
-                                borderTopColor: theme.colors.border,
-                            },
-                        ]}>
+                        <PaperTextInput
+                            multiline
+                            numberOfLines={3}
+                            value={newComment}
+                            onChangeText={setNewComment}
+                            placeholder="Add a class comment..."
+                            style={styles.commentInput}
+                            theme={{
+                                colors: {
+                                    text: theme.colors.text,
+                                    placeholder: theme.colors.text,
+                                    primary: theme.colors.primary,
+                                    background: 'transparent',
+                                },
+                            }}
+                        />
                         <Button
-                            mode="outlined"
-                            onPress={() => alert('Draft saved')}
-                            style={styles.footerButton}
-                            textColor="#3c4043"
-                            labelStyle={styles.footerButtonText}>
-                            Save Draft
-                        </Button>
-                        <Button
-                            icon="check"
+                            icon="comment"
                             mode="contained"
-                            onPress={() => alert('Assignment turned in')}
-                            disabled={!markedAsDone}
-                            style={styles.footerButton}
-                            contentStyle={{flexDirection: 'row-reverse'}}
-                            labelStyle={styles.footerButtonText}>
-                            Turn In
+                            onPress={handlePublicComment}
+                            style={styles.commentButton}>
+                            Post to Class
                         </Button>
-                    </View> */}
-                </SafeAreaView>
-            </Modal>
-        </Portal>
+                    </View>
+                </TabScreen>
+            </Tabs>
+        </TabsProvider>
     );
 };
 
