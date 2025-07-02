@@ -22,6 +22,7 @@ import {
     Paragraph,
     Title,
     ActivityIndicator,
+    Avatar,
 } from 'react-native-paper';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -37,8 +38,11 @@ import useClassroom from '../hooks/useClassroom';
 import {Item} from 'react-native-paper/lib/typescript/components/Drawer/Drawer';
 import dayjs from 'dayjs';
 import {DEFAULT_BANNER, HERO_IMAGE} from '../utils/constant';
+import useClassroomStore from '../states/classroomState';
+import {useGlobalStyles} from '../styles/globalStyles';
 
 const ClassroomListScreen = () => {
+    const globalStyle = useGlobalStyles();
     const theme = useTheme();
     const navigation = useNavigation();
     const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +50,7 @@ const ClassroomListScreen = () => {
     const [capacityFilter, setCapacityFilter] = useState(null);
     const [buildingFilter, setBuildingFilter] = useState(null);
     const {data: classrooms, isFetching, isLoading, refetch} = useClassroom();
-
+    const {setField} = useClassroomStore();
 
     const buildings = [];
 
@@ -83,15 +87,15 @@ const ClassroomListScreen = () => {
         setSearchQuery('');
     };
 
- 
-    const renderItem = ({item}) => ( 
+    const renderItem = ({item}) => (
         <Card style={styles.card}>
             <TouchableRipple
-                onPress={() =>
+                onPress={() => {
+                    setField('faculty', item?.faculty) || null;
                     navigation.navigate('ClassroomDetails', {
                         class_id: item?.slug,
-                    })
-                }>
+                    });
+                }}>
                 <>
                     <ImageBackground
                         source={{
@@ -117,7 +121,9 @@ const ClassroomListScreen = () => {
                                 // opacity: 0.9,
                             }}>
                             <View style={styles.titleHeader}>
-                                <Title style={styles.cardTitle}>
+                                <Title
+                                    style={styles.cardTitle}
+                                    numberOfLines={1}>
                                     {item?.subject?.subject_name}
                                 </Title>
                                 <Text style={styles.cardSubtitle}>
@@ -127,13 +133,20 @@ const ClassroomListScreen = () => {
                         </LinearGradient>
                     </ImageBackground>
                     <Card.Content style={styles.cardContent}>
-                        <Paragraph style={styles.cardText}>
+                        <Paragraph style={styles.cardText} numberOfLines={1}>
                             <MaterialIcons name="class" size={16} />{' '}
                             <Text style={styles.boldText}>Class:</Text>{' '}
                             <Text style={styles.className}>
                                 {item.class_name}
                             </Text>{' '}
-                            - Section {item.section}
+                        </Paragraph>
+                        <Paragraph style={styles.cardText}>
+                            <MaterialCommunityIcons
+                                name="google-classroom"
+                                size={16}
+                            />{' '}
+                            <Text style={styles.boldText}>Section:</Text>{' '}
+                            {item.section}
                         </Paragraph>
                         <Paragraph style={styles.cardText}>
                             <MaterialCommunityIcons
@@ -150,8 +163,15 @@ const ClassroomListScreen = () => {
                         <Paragraph style={styles.cardText}>
                             <AntDesign name="clockcircle" size={16} />{' '}
                             <Text style={styles.boldText}>Time:</Text>{' '}
-                            {dayjs(item.time_in, 'HH:mm:ss').format('h A')} -{' '}
-                            {dayjs(item.time_out, 'HH:mm:ss').format('h A')}
+                            {dayjs(
+                                `1970-01-01 ${item.time_in}`,
+                                'YYYY-MM-DD HH:mm:ss',
+                            ).format('h A')}{' '}
+                            -{' '}
+                            {dayjs(
+                                `1970-01-01 ${item.time_out}`,
+                                'YYYY-MM-DD HH:mm:ss',
+                            ).format('h A')}
                         </Paragraph>
                     </Card.Content>
 
@@ -321,17 +341,18 @@ const ClassroomListScreen = () => {
                         }
                         ListEmptyComponent={
                             !isLoading ? (
-                                <View style={styles.emptyContainer}>
-                                    <Ionicons
-                                        name="search-off"
-                                        size={50}
-                                        color={theme.colors.onSurfaceDisabled}
+                                <View style={globalStyle.emptyContainer}>
+                                    <Avatar.Icon
+                                        size={64}
+                                        icon="school-outline"
+                                        style={globalStyle.emptyIcon}
                                     />
-                                    <Text style={styles.emptyText}>
-                                        No classrooms found
+                                    <Text style={globalStyle.emptyTitle}>
+                                        No Classrooms Found
                                     </Text>
-                                    <Text style={styles.emptySubtext}>
-                                        Try adjusting your filters
+                                    <Text style={globalStyle.emptySubtitle}>
+                                        Your classrooms will appear here once
+                                        they're added.
                                     </Text>
                                 </View>
                             ) : null

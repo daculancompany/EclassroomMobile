@@ -28,8 +28,9 @@ import {
 } from 'react-query';
 import axiosConfig from '../../utils/axiosConfig';
 import LinearGradient from 'react-native-linear-gradient';
+import useClassroomStore from '../../states/classroomState';
 
-const PrivateMessage = ({classworkId, currentUser, otherUser, isActive}) => {
+const PrivateMessage = ({classworkId}) => {
     const theme = useTheme();
     const [newMessage, setNewMessage] = useState('');
     const flatListRef = useRef(null);
@@ -38,6 +39,7 @@ const PrivateMessage = ({classworkId, currentUser, otherUser, isActive}) => {
     const [initialLoad, setInitialLoad] = useState(true);
     const [unreadMessages, setUnreadMessages] = useState([]);
     const [loading, setLoading] = useState(false);
+    const {currentUser, otherUser, classworkDetails} = useClassroomStore();
 
     // WhatsApp color scheme
     const whatsAppColors = {
@@ -69,14 +71,14 @@ const PrivateMessage = ({classworkId, currentUser, otherUser, isActive}) => {
             },
         },
     );
-
+ 
     // Fetch messages with React Query
     const {data: messages = [], isFetching} = useQuery(
         ['classworkMessages', classworkId],
         async () => {
             const response = await axiosConfig.get(
-                `classwork/${classworkId}/messages`,
-            );
+                            `classwork/${classworkId}/messages/${currentUser?.id}`
+                        );
             return response.data.map(msg => ({
                 ...msg,
                 sender:
@@ -85,7 +87,7 @@ const PrivateMessage = ({classworkId, currentUser, otherUser, isActive}) => {
             }));
         },
         {
-            enabled: isActive,
+            enabled: classworkDetails,
             refetchInterval: 3000,
             onSuccess: data => {
                 const previousData = queryClient.getQueryData([
@@ -114,7 +116,7 @@ const PrivateMessage = ({classworkId, currentUser, otherUser, isActive}) => {
             },
         },
     );
-
+    
     // Send message mutation
     const {mutate: sendMessage} = useMutation(
         async messageData => {
@@ -199,19 +201,18 @@ const PrivateMessage = ({classworkId, currentUser, otherUser, isActive}) => {
         }
     }, [messages, shouldScroll]);
 
+    
     const handleSendMessage = () => {
         if (!newMessage.trim()) return;
-        setLoading(true);
         const messageData = {
             classwork_id: classworkId,
             message: newMessage,
             sender_id: currentUser.id,
-            [currentUser.role + '_id']: currentUser.id,
-            [otherUser.role + '_id']: otherUser.id,
+            [currentUser.role + "_id"]: currentUser.id,
+            [otherUser.role + "_id"]: otherUser.id,
         };
-
         sendMessage(messageData);
-        setNewMessage('');
+        setNewMessage("");
     };
 
     // Message status indicator

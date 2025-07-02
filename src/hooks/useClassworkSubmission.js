@@ -6,13 +6,13 @@ const fetch = async class_id => {
     return data || [];
 };
 
-export default function useClassworkSubmission(class_id, studentSubmission) {
+export default function useClassworkSubmission(class_id) {
     return useQuery(
-        ['classroom-classwork-submission', class_id, studentSubmission],
+        ['classroom-classwork-submission', class_id],
         () => fetch(class_id),
         {
             keepPreviousData: true,
-            enabled: !!studentSubmission,
+            // enabled: !!studentSubmission,
         },
     );
 }

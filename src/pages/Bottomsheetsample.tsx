@@ -10,7 +10,7 @@ import {
     SafeAreaView,
     Animated,
     Text,
-    KeyboardAvoidingView,
+    KeyboardAvoidingView,a
     Platform,
 } from 'react-native';
 import {Portal, Modal, IconButton, useTheme} from 'react-native-paper';
@@ -362,17 +362,6 @@ const App = () => {
                 onDismiss={() => setVisible(false)}>
                 <ChatContent messages={messages} setMessages={setMessages} />
             </FacebookChatModal>
-            {/* <View style={globalStyle.emptyContainer}>
-                <Avatar.Icon
-                    size={64}
-                    icon="bell-off-outline"
-                    style={globalStyle.emptyIcon}
-                />
-                <Text style={globalStyle.emptyTitle}>No Notifications Yet</Text>
-                <Text style={globalStyle.emptySubtitle}>
-                    You're all caught up! New notifications will show up here.
-                </Text>
-            </View> */}
         </View>
     );
 };

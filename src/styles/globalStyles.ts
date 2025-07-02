@@ -61,11 +61,51 @@ export const useGlobalStyles = () => {
             fontSize: 12,
             fontWeight: '500',
         },
-        textCenter:{
+        textCenter: {
             textAlign: 'center',
         },
-        textPrimary:{
+        textPrimary: {
             color: theme.colors.primary,
-        }
+        },
+        statusContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            textAlign: 'center',
+            flex: 1,
+            justifyContent: 'center',
+        },
+        statusText: {
+            marginLeft: 8,
+        },
+        presentCell: {
+            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+        },
+        absentCell: {
+            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+        },
+        lateCell: {
+            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+        },
+        emptyContainer: {
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 32,
+            marginTop: 50,
+        },
+        emptyIcon: {
+            backgroundColor: '#e0e0e0',
+            marginBottom: 16,
+        },
+        emptyTitle: {
+            fontSize: 18,
+            fontWeight: '600',
+            marginBottom: 8,
+        },
+        emptySubtitle: {
+            fontSize: 14,
+            color: '#777',
+            textAlign: 'center',
+        },
     });
 };

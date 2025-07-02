@@ -24,6 +24,8 @@ import useGradeSheet from '../../hooks/useGradeSheet';
 import {useRoute} from '@react-navigation/native';
 import BottomSheet from '../BottomSheet';
 import {useGlobalStyles} from '../../styles/globalStyles';
+import useStatusIcon from '../../hooks/useStatusIcon';
+import {formatDate} from '../../utils/helper';
 
 const {width} = Dimensions.get('window');
 const size = width - 40;
@@ -31,7 +33,110 @@ const radius = size / 2;
 const centerX = size / 2;
 const centerY = size / 2;
 
-// Chart data
+const StatusIcon = React.memo(({status}) => {
+    const icon = useStatusIcon(status);
+    return icon;
+});
+
+const AttendanceRow = ({record}) => {
+    const globalStyle = useGlobalStyles();
+    return (
+        <DataTable.Row>
+            <DataTable.Cell style={styles.dateTime}>
+                {formatDate(record.date_time, true)}
+            </DataTable.Cell>
+            <DataTable.Cell style={globalStyle[`${record.status}Cell`]}>
+                <View style={globalStyle.statusContainer}>
+                    <StatusIcon status={record.status} />
+                    <Text style={globalStyle.statusText}>
+                        {record.status.charAt(0).toUpperCase() +
+                            record.status.slice(1)}
+                        {record.time ? ` (${record.time})` : ''}
+                    </Text>
+                </View>
+            </DataTable.Cell>
+        </DataTable.Row>
+    );
+};
+
+const AttendanceTable = ({attendances}) => {
+    const globalStyle = useGlobalStyles();
+    return (
+        <>
+            <Text style={[globalStyle.textCenter, globalStyle.textPrimary]}>
+                ATTENDANCE
+            </Text>
+            <DataTable>
+                <DataTable.Header>
+                    <DataTable.Title>Date & Time</DataTable.Title>
+                    <DataTable.Title>Status</DataTable.Title>
+                </DataTable.Header>
+                {attendances.map((record, index) => (
+                    <AttendanceRow key={index} record={record} />
+                ))}
+            </DataTable>
+        </>
+    );
+};
+
+const OtherTable = ({title, quizes}) => {
+    const globalStyle = useGlobalStyles();
+    return (
+        <>
+            <View style={{marginVertical: 20}} />
+            <Text style={[globalStyle.textCenter, globalStyle.textPrimary]}>
+                {title}
+            </Text>
+            <DataTable>
+                <DataTable.Header>
+                    <DataTable.Title>Title</DataTable.Title>
+                    <DataTable.Title
+                        style={{maxWidth: 80, justifyContent: 'center'}}>
+                        Score
+                    </DataTable.Title>
+                </DataTable.Header>
+                {quizes.map((record, index) => (
+                    <DataTable.Row key={index}>
+                        <DataTable.Cell>
+                            <Text>{record?.title}</Text>
+                        </DataTable.Cell>
+                        <DataTable.Cell
+                            style={{maxWidth: 80, justifyContent: 'center'}}>
+                            <Text style={globalStyle.textCenter}>
+                                {record?.scores[0]?.score || 0}/
+                                {record?.points_possible}
+                            </Text>
+                        </DataTable.Cell>
+                    </DataTable.Row>
+                ))}
+            </DataTable>
+        </>
+    );
+};
+
+const initialData = [
+    {
+        label: 'QUIZ/ATENDANCE',
+        value: 30,
+        display: '0/0',
+        color: '#4CAF50',
+    },
+    {label: 'LAB', value: 25, display: '0/0', color: '#2196F3'},
+    {label: 'ASSIGNMENTS', value: 14, display: '0/0', color: '#FFC107'},
+    {label: 'MIDTERM EXAM', value: 30, display: '0/0', color: '#F44336'},
+];
+
+const initialData2 = [
+    {
+        label: 'QUIZ/ATENDANCE',
+        value: 30,
+        display: '0/0',
+        color: '#4CAF50',
+    },
+    {label: 'LAB', value: 25, display: '0/0', color: '#2196F3'},
+    {label: 'ASSIGNMENTS', value: 14, display: '0/0', color: '#FFC107'},
+    {label: 'FINAL EXAM/PROJECT', value: 30, display: '0/0', color: '#F44336'},
+];
 
 const CustomPieChart = () => {
     const globalStyle = useGlobalStyles();
@@ -49,49 +154,42 @@ const CustomPieChart = () => {
         refetch: refetchSheet,
     } = useGradeSheet(class_id);
 
-    console.log('sheet --->', sheet);
-    const initialData = [
-        {
-            label: 'QUIZ/ATENDANCE',
-            value: 30,
-            display: '0/0',
-            color: '#4CAF50',
-        },
-        {label: 'LAB', value: 25, display: '0/0', color: '#2196F3'},
-        {label: 'ASSIGNMENTS', value: 14, display: '0/0', color: '#FFC107'},
-        {label: 'MIDTERM EXAM', value: 30, display: '0/0', color: '#F44336'},
-    ];
-
-
-
     const [data, setData] = useState(initialData);
+    const [data2, setData2] = useState(initialData2);
 
-    const attendances = sheet?.attendances || [];
-    const fattendances = sheet?.fattendances || [];
+    const attendances = Array.isArray(sheet?.attendances)
+        ? sheet?.attendances
+        : [];
+    const fattendances = Array.isArray(sheet?.fattendances)
+        ? sheet?.fattendances
+        : [];
     const distinctDates = [
         ...new Set(attendances.map(att => att.date_time.split(' ')[0])),
     ];
     const fdistinctDates = [
         ...new Set(fattendances.map(att => att.date_time.split(' ')[0])),
     ];
-    const studentList = sheet?.students || [];
-    const quizes = sheet?.quizes || [];
-    const fquizes = sheet?.fquizes || [];
-    const exercises = sheet?.exercises || [];
-    const fexercises = sheet?.fexercises || [];
-    const assignments = sheet?.assignments || [];
-    const fassignments = sheet?.fassignments || [];
-    const midterm = sheet?.midterm || [];
-    const finalExam = sheet?.final || [];
+
+    const studentList = sheet?.students ?? [];
+    const quizes = sheet?.quizes ?? [];
+    const fquizes = sheet?.fquizes ?? [];
+    const exercises = sheet?.exercises ?? [];
+    const fexercises = sheet?.fexercises ?? [];
+    const assignments = sheet?.assignments ?? [];
+    const fassignments = sheet?.fassignments ?? [];
+    const midterm = sheet?.midterm ?? [];
+    const finalExam = sheet?.final ?? [];
     const midtermCount = sheet?.midterm_count || 0;
     const finalCount = sheet?.final_count || 0;
 
     const [selectedSlice, setSelectedSlice] = useState(null);
+    const [selectedSlice2, setSelectedSlice2] = useState(null);
     const [visible, setVisible] = useState(false);
 
     // Create pie generator function
     const pieGenerator = d3Pie().value(d => d.value);
     const pieData = pieGenerator(data);
+    const pieData2 = pieGenerator(data2);
 
     // Create arc generator for the main slice
     const arcGenerator = d3Arc().outerRadius(radius).innerRadius(60);
@@ -100,19 +198,6 @@ const CustomPieChart = () => {
     const borderArcGenerator = d3Arc()
         .outerRadius(radius + 2) // 2 pixels larger than main slice
         .innerRadius(60);
-
-    const handleSlicePress = index => {
-        setSelectedSlice(index);
-        console.log(data[index]);
-        if (index === 0) {
-            console.log(sheet?.attendances);
-            console.log(sheet?.exercises);
-        }
-        setVisible(true);
-        // setTimeout(() => {
-        //     setVisible(true);
-        // }, 200);
-    };
 
     const hideModal = () => {
         setVisible(false);
@@ -130,49 +215,74 @@ const CustomPieChart = () => {
         }
     }
 
+    // Constants for better readability
+    const GRADE_COMPONENTS = {
+        ATTENDANCE: 'ATTENDANCE',
+        LABORATORY: 'LABORATORY',
+        ASSIGNMENT: 'ASSIGNMENT',
+        MIDTERM: 'MIDTERM',
+    };
+
+    // Weight configuration (now more explicit)
+    const WEIGHTS = {
+        MIXED_SCORE: 0.7, // 70% of final grade
+        MIDTERM: 0.3, // 30% of final grade
+    };
+
+    const MIXED_SCORE_WEIGHTS = {
+        ATTENDANCE: 0.4, // 40% of mixed score
+        LABORATORY: 0.4, // 40% of mixed score
+        ASSIGNMENT: 0.2, // 20% of mixed score
+    };
+
     function calculateFinalGrade(components) {
-        const WEIGHTS = {
-            MIDTERM: 0.3,
-            ATTENDANCE: 0.3,
-            LABORATORY: 0.25,
-            ASSIGNMENT: 0.14,
-        };
+        // Calculate mixed score components
+        const mixedScore =
+            components.reduce((sum, comp) => {
+                if (!MIXED_SCORE_WEIGHTS[comp.componentType]) return sum;
 
-        const totalWeight = Object.values(WEIGHTS).reduce(
-            (sum, w) => sum + w,
-            0,
+                const percentage = (comp.earned / comp.total) * 100;
+                const grade = percentageToGrade(percentage);
+                return sum + grade * MIXED_SCORE_WEIGHTS[comp.componentType];
+            }, 0) * WEIGHTS.MIXED_SCORE;
+
+        // Calculate midterm score
+        const midtermComponent = components.find(
+            c => c.componentType === GRADE_COMPONENTS.MIDTERM,
         );
+        const midtermPercentage =
+            (midtermComponent.earned / midtermComponent.total) * 100;
+        const midtermGrade =
+            percentageToGrade(midtermPercentage) * WEIGHTS.MIDTERM;
 
+        // Calculate final grade
+        const finalGrade = mixedScore + midtermGrade;
+
+        // Prepare detailed component results
         const componentResults = components.map(comp => {
             const percentage = (comp.earned / comp.total) * 100;
-
-            let unweightedGrade = percentageToGrade(percentage);
-
-            unweightedGrade = Math.round(unweightedGrade * 10) / 10;
-
-            const weight = WEIGHTS[comp.componentType];
-            const weightedGrade = unweightedGrade * weight;
+            const unweightedGrade = percentageToGrade(percentage);
+            const weight =
+                comp.componentType === GRADE_COMPONENTS.MIDTERM
+                    ? WEIGHTS.MIDTERM
+                    : MIXED_SCORE_WEIGHTS[comp.componentType] *
+                      WEIGHTS.MIXED_SCORE;
 
             return {
                 componentType: comp.componentType,
                 earned: comp.earned,
                 total: comp.total,
                 percentage: Math.round(percentage * 10) / 10,
-                unweightedGrade,
+                unweightedGrade: Math.round(unweightedGrade * 10) / 10,
                 weight,
-                weightedGrade: Math.round(weightedGrade * 10) / 10,
+                weightedGrade: Math.round(unweightedGrade * weight * 10) / 10,
             };
         });
 
-        const totalWeighted = componentResults.reduce(
-            (sum, comp) => sum + comp.weightedGrade,
-            0,
-        );
         return {
-            finalGrade: parseFloat(totalWeighted.toFixed(1)),
+            finalGrade: parseFloat(finalGrade.toFixed(1)),
             components: componentResults,
             gradingScale: '1.0–5.0 (1.0 highest, 5.0 lowest)',
-            totalWeight: parseFloat(totalWeight.toFixed(1)),
         };
     }
 
@@ -306,12 +416,16 @@ const CustomPieChart = () => {
 
             // final
 
-            const fattendanceScores = fdistinctDates.map(date => {
-                const hasAttendance = fattendances.some(
-                    att => att.date_time.startsWith(date), // Removed student_id check
-                );
-                return hasAttendance ? classroom?.attendance_points : 0;
-            });
+            const fattendanceScores =
+                Array.isArray(fdistinctDates) &&
+                fdistinctDates.map(date => {
+                    const hasAttendance = fattendances.some(
+                        att =>
+                            att.student_id === studentId &&
+                            att.date_time.startsWith(date),
+                    );
+                    return hasAttendance ? classroom?.attendance_points : 0;
+                });
 
             const ftotalAttendanceScores = fattendanceScores.reduce(
                 (sum, score) => sum + score,
@@ -454,51 +568,62 @@ const CustomPieChart = () => {
     };
 
     const dataSet = generateStudentData();
+    const studentData = dataSet?.[0] || {};
 
-    const midtermGrade = dataSet?.[0]?.midtermGrade ?? '-';
+    // Utility function to sum possible points
+    const sumPoints = (items = []) =>
+        items.reduce((sum, item) => sum + (item?.points_possible || 0), 0);
 
-    const totalScoreAttendanceQuiz = (() => {
-        const totalQuizPoints =
-            quizes?.reduce(
-                (sum, quiz) => sum + (quiz?.points_possible || 0),
-                0,
-            ) || 0;
+    // Utility function to sum actual scores
+    const sumScores = (items = []) =>
+        items.reduce(
+            (sum, item) =>
+                sum +
+                (item.scores?.reduce(
+                    (scoreSum, score) => scoreSum + (score?.score || 0),
+                    0,
+                ) || 0),
+            0,
+        );
 
+    // Attendance + Quiz point total calculator
+    const calculateAttendanceQuizTotal = (quizzes, classroom, dates) => {
+        const totalQuizPoints = sumPoints(quizzes);
         const attendancePointsPerDay = classroom?.attendance_points || 0;
         const totalAttendancePoints =
-            (distinctDates?.length || 0) * attendancePointsPerDay;
-
+            (dates?.length || 0) * attendancePointsPerDay;
         return totalAttendancePoints + totalQuizPoints;
-    })();
-    const totalAttendance = dataSet?.[0]?.totalAttendance ?? '-';
+    };
 
-    const totalExercises = dataSet?.[0]?.totalExercises ?? '-';
-    const totalExercisePoints =
-        exercises?.reduce(
-            (sum, exercise) => sum + (exercise?.points_possible || 0),
-            0,
-        ) || 0;
+    // Midterm Data
+    const midtermGrade = studentData.midtermGrade ?? '-';
+    const totalScoreAttendanceQuiz = calculateAttendanceQuizTotal(
+        quizes,
+        classroom,
+        distinctDates,
+    );
+    const totalAttendance = studentData.totalAttendance ?? '-';
+    const totalExercises = studentData.totalExercises ?? '-';
+    const totalExercisePoints = sumPoints(exercises);
+    const totalAssigments = studentData.totalAssigments ?? '-';
+    const totalAssignmentPoints = sumPoints(assignments);
+    const maxMidtermPoints = sumPoints(midterm) || 100;
+    const totalMidtermPoints = sumScores(midterm);
 
-    const totalAssigments = dataSet?.[0]?.totalAssigments ?? '-';
-    const totalAssignmentPoints =
-        assignments?.reduce(
-            (sum, assignment) => sum + (assignment?.points_possible || 0),
-            0,
-        ) || 0;
-
-    const maxMidtermPoints =
-        midterm.reduce((sum, quiz) => sum + (quiz?.points_possible || 0), 0) ||
-        100;
-
-    const totalMidtermPoints = midterm.reduce((sum, item) => {
-        return (
-            sum +
-            (item.scores?.reduce(
-                (scoreSum, score) => scoreSum + (score?.score || 0),
-                0,
-            ) || 0)
-        );
-    }, 0);
+    // Final Data
+    const finalGrade = studentData.finalGrade ?? '-';
+    const ftotalScoreAttendanceQuiz = calculateAttendanceQuizTotal(
+        fquizes,
+        classroom,
+        distinctDates,
+    );
+    const ftotalAttendance = studentData.ftotalAttendance ?? '-';
+    const ftotalExercises = studentData.ftotalExercises ?? '-';
+    const ftotalExercisePoints = sumPoints(fexercises);
+    const ftotalAssigments = studentData.ftotalAssigments ?? '-';
+    const ftotalAssignmentPoints = sumPoints(fassignments);
+    const finalPoints = sumPoints(finalExam) || 100;
+    const totalFinalPoints = sumScores(finalExam);
 
     const getChartValue = value => {
         if (value === 'QUIZ/ATENDANCE') {
@@ -532,65 +657,70 @@ const CustomPieChart = () => {
         return '';
     };
 
-    let modalDAta = null;
+    const getChartValueFinal2 = value => {
+        console.log(value);
+        if (value === 'QUIZ/ATENDANCE') {
+            return `${ftotalAttendance}/${ftotalScoreAttendanceQuiz}`;
+        }
+        if (value === 'LAB') {
+            return `${ftotalExercises}/${ftotalExercisePoints}`;
+        }
+        if (value === 'ASSIGNMENTS') {
+            return `${ftotalAssigments}/${ftotalAssignmentPoints}`;
+        }
+        if (value === 'FINAL EXAM/PROJECT') {
+            return `${totalFinalPoints}/${finalPoints}`;
+        }
+        return '';
+    };
 
-    if (selectedSlice === 0) {
-        const attendances = sheet?.attendances || [];
-        const quizes = sheet?.quizesZ || [];
-        modalDAta = (
-            <>
-                <Text style={[globalStyle.textCenter, globalStyle.textPrimary]}>
-                    ATTENDANCE
-                </Text>
-                <DataTable>
-                    <DataTable.Header>
-                        <DataTable.Title style={styles.categoryColumn}>
-                            Title
-                        </DataTable.Title>
-                        <DataTable.Title numeric>Score</DataTable.Title>
-                    </DataTable.Header>
+    if (!sheet) return null;
 
-                    {attendances.map((attendance, index) => (
-                        <DataTable.Row key={index}>
-                            <DataTable.Cell style={styles.categoryCell}>
-                                {attendance.date_time}
-                            </DataTable.Cell>
-                            <DataTable.Cell>{attendance.status}</DataTable.Cell>
-                        </DataTable.Row>
-                    ))}
-                </DataTable>
-                <View style={{marginVertical: 20}} />
-                <Text style={[globalStyle.textCenter, globalStyle.textPrimary]}>
-                    HANDS-ON QUIZ
-                </Text>
-                <DataTable>
-                    <DataTable.Header>
-                        <DataTable.Title style={styles.categoryColumn}>
-                            Title
-                        </DataTable.Title>
-                        <DataTable.Title numeric>Score</DataTable.Title>
-                    </DataTable.Header>
-                    <DataTable.Row>
-                        <DataTable.Cell style={styles.categoryCell}>
-                            ATTENDANCE
-                        </DataTable.Cell>
-                        <DataTable.Cell numeric>93/100</DataTable.Cell>
-                    </DataTable.Row>
-                </DataTable>
-            </>
-        );
+    const attendanceList = sheet.attendances || [];
+    const sliceMappings = [
+        {key: 'quizes', title: 'HANDS-ON QUIZ/ATTENDANCE'},
+        {key: 'exercises', title: 'LABORATORY EXERCISES/CASE STUDIES'},
+        {key: 'assignments', title: 'ASSIGNMENT/GROUP WORK'},
+        {key: 'midterm', title: 'MIDTERM EXAM'},
+    ];
+
+    const sliceMappings2 = [
+        {key: 'fquizes', title: 'HANDS-ON QUIZ/ATTENDANCE'},
+        {key: 'fexercises', title: 'LABORATORY EXERCISES/CASE STUDIES'},
+        {key: 'fassignments', title: 'ASSIGNMENT/GROUP WORK'},
+        {key: 'final', title: 'FINAL EXAM'},
+    ];
+
+    let quizesList = [];
+    let titleData = null;
+
+    const selected = sliceMappings[selectedSlice];
+    if (selected) {
+        quizesList = sheet[selected.key] || [];
+        titleData = selected.title;
+    }
+    const selected2 = sliceMappings2[selectedSlice2];
+    if (selected2) {
+        quizesList = sheet[selected2.key] || [];
+        titleData = selected2.title;
     }
 
     return (
         <>
             <BottomSheet
-                heightPercentage={0.8}
+                heightPercentage={0.9}
                 visible={visible}
                 isScroll={true}
                 onDismiss={() => {
+                    setSelectedSlice(null);
                     setVisible(false);
                 }}>
-                {modalDAta}
+                <>
+                    {selectedSlice === 0 && (
+                        <AttendanceTable attendances={attendanceList} />
+                    )}
+                    <OtherTable title={titleData} quizes={quizesList} />
+                </>
             </BottomSheet>
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -634,9 +764,14 @@ const CustomPieChart = () => {
                                                     ? 0.7
                                                     : 1.0
                                             }
-                                            onPress={() =>
-                                                handleSlicePress(index)
-                                            }
+                                            onPress={() => {
+                                                {
+                                                    setSelectedSlice(index);
+                                                    setTimeout(() => {
+                                                        setVisible(true);
+                                                    }, 200);
+                                                }
+                                            }}
                                             // stroke="#000"
                                             // strokeWidth={1}
                                         />
@@ -702,9 +837,9 @@ const CustomPieChart = () => {
                             </Text>
                             <Svg width={size} height={size}>
                                 <G x={centerX} y={centerY}>
-                                    {pieData.map((slice, index) => {
+                                    {pieData2.map((slice, index) => {
                                         const {color, display, label} =
-                                            data[index];
+                                            data2[index];
                                         const path = arcGenerator(slice);
                                         const borderPath =
                                             borderArcGenerator(slice);
@@ -713,30 +848,31 @@ const CustomPieChart = () => {
 
                                         return (
                                             <G key={`slice-${index}`}>
-                                                {/* Border path (behind the main slice) */}
                                                 <Path
                                                     d={borderPath}
                                                     fill="none"
-                                                    // stroke="#000" // Black border color
-                                                    //  strokeWidth={1} // Border width
                                                 />
-
-                                                {/* Main slice */}
                                                 <Path
                                                     d={path}
                                                     fill={color}
                                                     opacity={
-                                                        selectedSlice === index
+                                                        selectedSlice2 === index
                                                             ? 0.7
                                                             : 1.0
                                                     }
-                                                    onPress={() =>
-                                                        handleSlicePress(index)
-                                                    }
-                                                    // stroke="#000"
-                                                    // strokeWidth={1}
+                                                    onPress={() => {
+                                                        {
+                                                            setSelectedSlice2(
+                                                                index,
+                                                            );
+                                                            setTimeout(() => {
+                                                                setVisible(
+                                                                    true,
+                                                                );
+                                                            }, 200);
+                                                        }
+                                                    }}
                                                 />
-
                                                 <SvgText
                                                     x={labelX}
                                                     y={labelY - 10}
@@ -746,7 +882,6 @@ const CustomPieChart = () => {
                                                     textAnchor="middle">
                                                     {label}
                                                 </SvgText>
-
                                                 <SvgText
                                                     x={labelX}
                                                     y={labelY + 8}
@@ -754,7 +889,7 @@ const CustomPieChart = () => {
                                                     fontSize="12"
                                                     fontWeight="bold"
                                                     textAnchor="middle">
-                                                    {getChartValueFinal(label)}
+                                                    {getChartValueFinal2(label)}
                                                 </SvgText>
                                             </G>
                                         );
@@ -778,7 +913,7 @@ const CustomPieChart = () => {
                                             fontSize="32"
                                             fontWeight="bold"
                                             textAnchor="middle">
-                                            {midtermGrade}
+                                            {finalGrade}
                                         </SvgText>
                                         <SvgText
                                             x={0}

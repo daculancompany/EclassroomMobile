@@ -37,9 +37,11 @@ import axiosConfig from '../../utils/axiosConfig';
 import {DEFAULT_BANNER, HERO_IMAGE} from '../../utils/constant';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import EmojiPicker from 'rn-emoji-keyboard';
-import BottomSheet from '@gorhom/bottom-sheet';
-import {BottomSheetView} from '@gorhom/bottom-sheet';
-import { SimpleLoading, ChatLoading } from './../../components/AdvancedGradientShimmer';
+import {useGlobalStyles} from '../../styles/globalStyles';
+import {
+    SimpleLoading,
+    ChatLoading,
+} from './../../components/AdvancedGradientShimmer';
 dayjs.extend(relativeTime);
 
 const {height} = Dimensions.get('window');
@@ -279,6 +281,7 @@ const CommentSection = ({
                     </View>
 
                     <FlatList
+                        showsVerticalScrollIndicator={false}
                         data={localComments || []}
                         keyExtractor={item => item.id.toString()}
                         contentContainerStyle={styles.commentList}
@@ -503,6 +506,7 @@ const ReplyItem = React.memo(({reply, onLike, onDelete, userID, theme}) => {
 });
 
 const BroadcastPage = () => {
+    const globalStyle = useGlobalStyles();
     const theme = useTheme();
     const route = useRoute();
     const {class_id: id} = route.params || {};
@@ -1062,6 +1066,7 @@ const BroadcastPage = () => {
             </Animated.View>
 
             <FlatList
+                showsVerticalScrollIndicator={false}
                 loading={true}
                 ref={flatListRef}
                 refreshing={refreshing}
@@ -1136,6 +1141,23 @@ const BroadcastPage = () => {
                 )}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
+                ListEmptyComponent={() =>
+                    !isAnnouncementsLoading ? (
+                        <View style={globalStyle.emptyContainer}>
+                            <Avatar.Icon
+                                size={64}
+                                icon="bell-outline"
+                                style={globalStyle.emptyIcon}
+                            />
+                            <Text style={globalStyle.emptyTitle}>
+                                No Announcements Yet
+                            </Text>
+                            <Text style={globalStyle.emptySubtitle}>
+                                Stay tuned! New announcements will appear here.
+                            </Text>
+                        </View>
+                    ) : null
+                }
             />
 
             {/* Comment Section Modal */}

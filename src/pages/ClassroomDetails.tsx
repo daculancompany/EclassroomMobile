@@ -7,8 +7,17 @@ import {
     SafeAreaView,
     ImageBackground,
     StatusBar,
+    Dimensions,
 } from 'react-native';
-import {Appbar, Text, Divider, Card, List, DataTable} from 'react-native-paper';
+import {
+    Appbar,
+    Text,
+    Divider,
+    Card,
+    List,
+    DataTable,
+    useTheme,
+} from 'react-native-paper';
 import {
     TabsProvider,
     Tabs,
@@ -30,6 +39,7 @@ import {
 import {DEFAULT_BANNER, HERO_IMAGE} from '../utils/constant';
 import useClassRoomSettings from '../hooks/useClassRoomSettings';
 import {useRoute} from '@react-navigation/native';
+import Pdf from 'react-native-pdf';
 
 const AcademicRecordTab = () => (
     <ScrollView style={styles.tabContent}>
@@ -91,6 +101,7 @@ const GradientTabBar = props => {
 // ===== MAIN COMPONENT =====
 
 const ClassroomDetails = ({navigation}) => {
+    const theme = useTheme();
     const route = useRoute();
     const {class_id} = route.params || {};
     const [previewImage, setPreviewImage] = useState(null);
@@ -104,6 +115,8 @@ const ClassroomDetails = ({navigation}) => {
         if (classroom) {
             if (classroom.hero_image) {
                 setPreviewImage(HERO_IMAGE + classroom.hero_image);
+            }else{
+                 setPreviewImage(DEFAULT_BANNER);
             }
         } else {
             if (!isLoading) {
@@ -111,6 +124,11 @@ const ClassroomDetails = ({navigation}) => {
             }
         }
     }, [classroom]);
+
+    const source = {
+        uri: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        cache: true,
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -173,7 +191,27 @@ const ClassroomDetails = ({navigation}) => {
                         label="Course Syllabus   "
                         icon="file"
                         labelStyle={styles.tabLabel}>
-                        <AcademicRecordTab />
+                        <View
+                            style={{
+                                height: 500,
+                                backgroundColor: theme.colors.background,
+                                marginTop: 20
+                            }}>
+                            <Pdf
+                                trustAllCerts={false}
+                                source={source}
+                                style={[
+                                    styles.pdf,
+                                    {
+                                        backgroundColor:
+                                            theme.colors.background,
+                                    },
+                                ]}
+                                onError={error =>
+                                    console.log('PDF load error:', error)
+                                }
+                            />
+                        </View>
                     </TabScreen>
                 </Tabs>
             </TabsProvider>
@@ -202,6 +240,11 @@ const styles = StyleSheet.create({
     },
     gradient: {
         height: 100,
+    },
+    pdf: {
+        flex: 1,
+        width: Dimensions.get('window').width,
+        height: Dimensions.get('window').height,
     },
 });
 

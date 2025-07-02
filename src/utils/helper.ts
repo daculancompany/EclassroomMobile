@@ -1,5 +1,6 @@
 //@ts-nocheck
 import dayjs from "dayjs";
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export const delay = (ms = 0) =>
     new Promise(resolve => setTimeout(resolve, ms));

@@ -7,7 +7,7 @@ export const FAILED_COLOR = '#f44336';
 export const SUCCESS_COLOR = '#8bc34a';
 export const BORDER_COLOR = '#777777';
 
-export const BASE_URL = 'https://a068-120-28-218-135.ngrok-free.app/';
+export const BASE_URL = 'http://192.168.0.102:8000/';
 export const API_URL =  BASE_URL + 'api/';
 export const DEFAULT_BANNER = BASE_URL + "images/default-banner.jpg";
 export const HERO_IMAGE = BASE_URL + "uploads/classroom/hero_image/";

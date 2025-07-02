@@ -11,11 +11,12 @@ import {
     Easing,
     ScrollView,
 } from 'react-native';
-import {Portal, Modal, useTheme} from 'react-native-paper';
+import {Portal, Modal, useTheme, IconButton} from 'react-native-paper';
 import {PanGestureHandler, State} from 'react-native-gesture-handler';
 import {BlurView} from '@react-native-community/blur';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const MODAL_HEIGHT = SCREEN_HEIGHT * 0.9; // Use 90% of screen height by default
 
 const useStyles = () => {
     const theme = useTheme();
@@ -83,47 +84,67 @@ const BottomSheet = ({
     enablePanGesture = true,
     showDragHandle = true,
     showCloseButton = true,
-    heightPercentage = 0.9,
-    isScroll = false,
+    heightPercentage = 0.9, // Default to 90% of screen height
+    isScroll = false, // New prop to enable/disable scrolling
 }) => {
     const styles = useStyles();
     const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const [keyboardHeight, setKeyboardHeight] = useState(0);
     const [isScrollAtTop, setIsScrollAtTop] = useState(true);
     const panGestureRef = useRef();
     const scrollViewRef = useRef();
-    const startY = useRef(0);
 
     const modalHeight = SCREEN_HEIGHT * heightPercentage;
 
     useEffect(() => {
         if (visible) {
+            // Reset values before showing
             translateY.setValue(SCREEN_HEIGHT);
             fadeAnim.setValue(0);
+            scaleAnim.setValue(0.95);
 
+            // Parallel animations
             Animated.parallel([
+                // Spring up animation
                 Animated.spring(translateY, {
                     toValue: 0,
                     speed: 30,
                     bounciness: 8,
                     useNativeDriver: true,
                 }),
+                // Fade in backdrop
                 Animated.timing(fadeAnim, {
                     toValue: 1,
                     duration: 200,
+                    easing: Easing.out(Easing.ease),
+                    useNativeDriver: true,
+                }),
+                // Slight scale effect
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    speed: 20,
+                    bounciness: 10,
                     useNativeDriver: true,
                 }),
             ]).start();
         } else {
+            // Animate out
             Animated.parallel([
                 Animated.timing(translateY, {
                     toValue: SCREEN_HEIGHT,
                     duration: 200,
+                    easing: Easing.in(Easing.ease),
                     useNativeDriver: true,
                 }),
                 Animated.timing(fadeAnim, {
                     toValue: 0,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scaleAnim, {
+                    toValue: 0.95,
                     duration: 150,
                     useNativeDriver: true,
                 }),
@@ -145,47 +166,40 @@ const BottomSheet = ({
         };
     }, []);
 
-    const handleGestureEvent = (event) => {
-        const { translationY } = event.nativeEvent;
-        translateY.setValue(translationY);
-    };
+    const onGestureEvent = Animated.event(
+        [{nativeEvent: {translationY: translateY}}],
+        {useNativeDriver: true},
+    );
 
-    const handleHandlerStateChange = (event) => {
+    const onHandlerStateChange = event => {
         if (event.nativeEvent.oldState === State.ACTIVE) {
-            const { translationY } = event.nativeEvent;
+            const {translationY} = event.nativeEvent;
             if (translationY > 100 && enablePanGesture && (isScroll ? isScrollAtTop : true)) {
-                closeModal();
+                Animated.parallel([
+                    Animated.timing(translateY, {
+                        toValue: SCREEN_HEIGHT,
+                        duration: 200,
+                        easing: Easing.in(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(fadeAnim, {
+                        toValue: 0,
+                        duration: 150,
+                        useNativeDriver: true,
+                    }),
+                ]).start(onDismiss);
             } else {
-                resetPosition();
+                Animated.spring(translateY, {
+                    toValue: 0,
+                    speed: 30,
+                    bounciness: 8,
+                    useNativeDriver: true,
+                }).start();
             }
         }
     };
 
-    const closeModal = () => {
-        Animated.parallel([
-            Animated.timing(translateY, {
-                toValue: SCREEN_HEIGHT,
-                duration: 200,
-                useNativeDriver: true,
-            }),
-            Animated.timing(fadeAnim, {
-                toValue: 0,
-                duration: 150,
-                useNativeDriver: true,
-            }),
-        ]).start(onDismiss);
-    };
-
-    const resetPosition = () => {
-        Animated.spring(translateY, {
-            toValue: 0,
-            speed: 30,
-            bounciness: 8,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    const handleScroll = (event) => {
+    const handleScroll = event => {
         const offsetY = event.nativeEvent.contentOffset.y;
         setIsScrollAtTop(offsetY <= 0);
     };
@@ -218,7 +232,7 @@ const BottomSheet = ({
             <Modal
                 transparent={true}
                 visible={visible}
-                onDismiss={closeModal}
+                onDismiss={() => onDismiss()}
                 style={styles.modal}>
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <Animated.View
@@ -231,33 +245,35 @@ const BottomSheet = ({
                         />
                     </Animated.View>
                 </TouchableWithoutFeedback>
-                {/* //keyboardHeight > 0 ? SCREEN_HEIGHT - keyboardHeight : modalHeight */}
-                <Animated.View
-                    style={[
-                        styles.container,
-                        {
-                            height: modalHeight,
-                            transform: [{translateY}],
-                        },
-                    ]}>
-                    <SafeAreaView style={styles.safeArea}>
-                        {showDragHandle && (
-                            <PanGestureHandler
-                                ref={panGestureRef}
-                                onGestureEvent={handleGestureEvent}
-                                onHandlerStateChange={handleHandlerStateChange}
-                                activeOffsetY={10}
-                                enabled={enablePanGesture && (isScroll ? isScrollAtTop : true)}>
+                <PanGestureHandler
+                    ref={panGestureRef}
+                    onGestureEvent={onGestureEvent}
+                    onHandlerStateChange={onHandlerStateChange}
+                    activeOffsetY={10}
+                    enabled={enablePanGesture && (isScroll ? isScrollAtTop : true)}>
+                    <Animated.View
+                        style={[
+                            styles.container,
+                            {
+                                height:
+                                    keyboardHeight > 0
+                                        ? SCREEN_HEIGHT - keyboardHeight
+                                        : modalHeight,
+                                transform: [{translateY}, {scale: scaleAnim}],
+                            },
+                        ]}>
+                        <SafeAreaView style={styles.safeArea}>
+                            {showDragHandle && (
                                 <View style={styles.header}>
                                     <View style={styles.dragHandleContainer}>
                                         <View style={styles.dragHandle} />
                                     </View>
                                 </View>
-                            </PanGestureHandler>
-                        )}
-                        {renderContent()}
-                    </SafeAreaView>
-                </Animated.View>
+                            )}
+                            {renderContent()}
+                        </SafeAreaView>
+                    </Animated.View>
+                </PanGestureHandler>
             </Modal>
         </Portal>
     );

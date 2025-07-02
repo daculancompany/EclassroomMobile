@@ -1,5 +1,5 @@
 //@ts-nocheck
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
     View,
     StyleSheet,
@@ -8,6 +8,7 @@ import {
     FlatList,
     useWindowDimensions,
     RefreshControl,
+    Animated,
 } from 'react-native';
 import {
     Card,
@@ -21,24 +22,34 @@ import {
     TouchableRipple,
     ActivityIndicator,
     Menu,
+    Avatar,
 } from 'react-native-paper';
 import useClassroomStore from '../../states/classroomState';
 import {StudentWork, AssignmentItem} from '../../components/';
 import {useRoute} from '@react-navigation/native';
 import useClassworks from '../../hooks/useClassworks';
 import {formatDueDate, formatDate} from '../../utils/helper';
-import RenderHtml from 'react-native-render-html';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Feather from 'react-native-vector-icons/Feather';
 import {useGlobalStyles} from '../../styles/globalStyles';
 import useClassworkSubmission from '../../hooks/useClassworkSubmission';
 import useGlobalStore from '../../states/globalState';
-import BottomSheet from '../BottomSheet';
+// import BottomSheet from '../BottomSheet';
+// import BottomSheet from './BottomSheet';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// import {useBottomSheet} from '../BottomSheetContext';
+import {useNavigation} from '@react-navigation/native';
+import {IconTextIcon} from '../../components/AdvancedGradientShimmer';
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 const ClassworksTab = () => {
+    const navigation = useNavigation();
     const globalStyle = useGlobalStyles();
     const theme = useTheme();
     const {width} = useWindowDimensions();
-    const {setField, studentSubmission} = useClassroomStore();
+    const {setField, studentSubmission, faculty, classworkDetails} =
+        useClassroomStore();
     const route = useRoute();
     const {class_id} = route.params || {};
     const {
@@ -55,8 +66,31 @@ const ClassworksTab = () => {
     const [termMenuVisible, setTermMenuVisible] = useState(false);
     const [typeMenuVisible, setTypeMenuVisible] = useState(false);
     const [dueMenuVisible, setDueMenuVisible] = useState(false);
-    const [classworkId, setClassworkId] = useState(null);
     const [visible, setIsVisible] = useState(false);
+    // const {showBottomSheet, hideBottomSheet} = useBottomSheet();
+
+    const scrollY = useRef(new Animated.Value(0)).current;
+
+    const data = Array.from({length: 20}, (_, i) => ({
+        id: i.toString(),
+        text: `Item ${i + 1}`,
+    }));
+
+    const onScroll = Animated.event(
+        [{nativeEvent: {contentOffset: {y: scrollY}}}],
+        {useNativeDriver: true},
+    );
+
+    const buttonCollapse = scrollY.interpolate({
+        inputRange: [0, 50],
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
+    });
+
+    const translateY = buttonCollapse.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-60, 0],
+    });
 
     // Filter options
     const termOptions = [
@@ -193,15 +227,7 @@ const ClassworksTab = () => {
         handlePanelChange,
         handleSubmission,
     }) => {
-        //getDueStatus(assignment.due_date)
         const dueStatus = 'due-soon';
-
-        // const handleLinkPress = async url => {
-        //     const supported = await Linking.canOpenURL(url);
-        //     if (supported) {
-        //         await Linking.openURL(url);
-        //     }
-        // };
 
         return (
             <>
@@ -220,11 +246,6 @@ const ClassworksTab = () => {
                             </Text>
                         </View>
                         <View style={styles.metaRow}></View>
-
-                        {/* <HtmlRendererWithSeeMore
-                            htmlContent={assignment?.instructions || ''}
-                            maxLines={3}
-                        /> */}
                         {Array.isArray(assignment.attachment) &&
                             assignment.attachment.length > 0 && (
                                 <>
@@ -353,52 +374,114 @@ const ClassworksTab = () => {
         });
     };
 
-    const handleSubmission = (slug, title, points_possible) => {
-        setField('studentSubmission', true);
-        setField('classwork_id', slug);
-        setField('classwork_title', title);
-        setField('classwork_points', points_possible);
-        setIsVisible(true);
+    const handleSubmission = async classwork => {
+        const student = JSON.parse(await AsyncStorage.getItem('user'));
+        const student_id = student?.student_id;
+        setField('classwork_id', classwork?.slug);
+        setField('classwork', classwork);
+
+        setField('otherUser', {
+            id: faculty?.id,
+            name: `${faculty?.fname} ${faculty?.lname} `,
+            role: 'faculty',
+            email: '',
+        });
+        setField('currentUser', {
+            id: student_id,
+            name: `Student Name`,
+            role: 'student',
+            email: '',
+        });
+        // showBottomSheet(
+        //     <StudentWork class_id={class_id} />,
+        //     {
+        //         heightPercentage: 0.95,
+        //         enablePanGesture: false,
+        //     },
+        // );
+        navigation.navigate('StudentWork', {
+            classworkId: classwork?.slug,
+        });
     };
 
     const MemoizedAssignmentItem = React.memo(AssignmentItem);
 
     const renderItem = ({item}) => (
         <TouchableRipple
-            onPress={() =>
-                handleSubmission(item.slug, item.title, item.points_possible)
-            }
+            onPress={() => handleSubmission(item)}
             borderless={true}
-            style={globalStyle.assignmentCard}>
+            style={[globalStyle.assignmentCard]}>
             <View style={globalStyle.assignmentContent}>
-                <Text style={globalStyle.assignmentTitle}>{item.title}</Text>
-
-                <View style={globalStyle.assignmentDetailsRow}>
+                <View
+                    style={[
+                        styles.termWrapper,
+                        item?.term === 'midterm' && {
+                            backgroundColor: '#91caff',
+                            borderWidth: 1,
+                            borderColor: '#91caff',
+                        },
+                        item?.term === 'final' && {
+                            backgroundColor: '#f6ffed',
+                            borderWidth: 1,
+                            borderColor: '#b7eb8f',
+                        },
+                        // Add more conditions as needed
+                    ]}>
+                    <Text
+                        style={[
+                            styles.termText,
+                            item?.term === 'midterm' && {color: '#0958d9'},
+                            item?.term === 'final' && {color: '#389e0d'},
+                            // Add more conditions as needed
+                        ]}>
+                        {item?.term?.toUpperCase?.() || ''}
+                    </Text>
+                </View>
+                <Text style={[globalStyle.assignmentTitle, {marginTop: 10}]}>
+                    {item.title}
+                </Text>
+                <View style={[globalStyle.assignmentDetailsRow]}>
                     <View style={globalStyle.assignmentDetailItem}>
-                        <Icon
-                            source="numeric"
+                        <Feather
+                            name="star"
                             size={16}
                             color={theme.colors.primary}
                         />
                         <Text style={globalStyle.assignmentDetailText}>
-                            {item.points_possible || 0} pts
+                            {item.score || '0'}/{item.points_possible || 0}
                         </Text>
                     </View>
 
-                    {item.due_date && (
-                        <View style={globalStyle.assignmentDetailItem}>
-                            <Icon
-                                source="calendar-clock"
-                                size={16}
-                                color={theme.colors.primary}
-                            />
-                            <Text style={globalStyle.assignmentDetailText}>
-                                {new Date(item.due_date).toLocaleDateString()}
-                            </Text>
-                        </View>
-                    )}
+                    <View style={globalStyle.assignmentDetailItem}>
+                        <Feather
+                            name="calendar"
+                            size={16}
+                            color={theme.colors.primary}
+                        />
+                        <Text style={globalStyle.assignmentDetailText}>
+                            {item.due_date
+                                ? formatDate(item.due_date, true)
+                                : 'None'}
+                        </Text>
+                    </View>
+                    <View style={globalStyle.assignmentDetailItem}>
+                        <Feather
+                            name="message-circle"
+                            size={16}
+                            color={theme.colors.primary}
+                        />
+                        <Text style={globalStyle.assignmentDetailText}>0</Text>
+                    </View>
+                    <View style={globalStyle.assignmentDetailItem}>
+                        <Icon
+                            name="attach"
+                            size={16}
+                            color={theme.colors.primary}
+                        />
+                        <Text style={globalStyle.assignmentDetailText}>0</Text>
+                    </View>
 
-                    {item.submission_type && (
+                    {/* {item.submission_type && (
                         <View style={styles.assignmentDetailItem}>
                             <Icon
                                 source="file-upload"
@@ -409,7 +492,7 @@ const ClassworksTab = () => {
                                 {item.submission_type}
                             </Text>
                         </View>
-                    )}
+                    )} */}
                 </View>
 
                 {item?.status && (
@@ -426,187 +509,188 @@ const ClassworksTab = () => {
 
     return (
         <>
-            <BottomSheet
-                heightPercentage={1}
-                visible={visible}
-                onDismiss={() => {
-                    setIsVisible(false);
+            {/* <BottomSheet
+                heightPercentage={0.95}
+                visible={classworkDetails}
+                onClose={() => {
+                    setField('classworkDetails',false);
                 }}>
                 <StudentWork class_id={class_id} />
-            </BottomSheet>
-            {/* <IconButton
-                icon="close"
-                size={20}
-                iconColor={'red'}
-                onPress={() => setIsVisible(true)}
-                style={{
-                    marginRight: 8,
-                }}
-            /> */}
-            {/* Filter Controls */}
-            <View style={styles.filterContainer}>
-                <Menu
-                    visible={termMenuVisible}
-                    onDismiss={() => setTermMenuVisible(false)}
-                    anchor={
-                        <Button
-                            mode="outlined"
-                            onPress={() => setTermMenuVisible(true)}
-                            style={styles.filterButton}
-                            icon="filter">
-                            {filterTerm
-                                ? filterTerm.charAt(0).toUpperCase() +
-                                  filterTerm.slice(1)
-                                : 'All Terms'}
-                        </Button>
-                    }>
-                    {termOptions.map(option => (
-                        <Menu.Item
-                            key={option.value || 'all'}
-                            onPress={() => {
-                                setFilterTerm(option.value);
-                                setTermMenuVisible(false);
-                            }}
-                            title={option.label}
-                        />
-                    ))}
-                </Menu>
+            </BottomSheet> */}
+            {isLoading && <IconTextIcon count={4} />}
+            {!isLoading && (
+                <>
+                    <Animated.View
+                        style={[
+                            styles.filterContainer,
+                            {
+                                transform: [{translateY}],
+                                opacity: buttonCollapse,
+                            },
+                        ]}>
+                        <View style={styles.filterContainerContent}>
+                            <Menu
+                                visible={termMenuVisible}
+                                onDismiss={() => setTermMenuVisible(false)}
+                                anchor={
+                                    <Button
+                                        mode="outlined"
+                                        onPress={() => setTermMenuVisible(true)}
+                                        style={styles.filterButton}
+                                        icon="filter">
+                                        {filterTerm
+                                            ? filterTerm
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                              filterTerm.slice(1)
+                                            : 'All Terms'}
+                                    </Button>
+                                }>
+                                {termOptions.map(option => (
+                                    <Menu.Item
+                                        key={option.value || 'all'}
+                                        onPress={() => {
+                                            setFilterTerm(option.value);
+                                            setTermMenuVisible(false);
+                                        }}
+                                        title={option.label}
+                                    />
+                                ))}
+                            </Menu>
 
-                <Menu
-                    visible={typeMenuVisible}
-                    onDismiss={() => setTypeMenuVisible(false)}
-                    anchor={
-                        <Button
-                            mode="outlined"
-                            onPress={() => setTypeMenuVisible(true)}
-                            style={styles.filterButton}
-                            icon="filter">
-                            {filterType
-                                ? typeOptions.find(
-                                      opt => opt.value === filterType,
-                                  )?.label || filterType.replace(/-/g, ' ')
-                                : 'All Types'}
-                        </Button>
-                    }>
-                    {typeOptions.map(option => (
-                        <Menu.Item
-                            key={option.value || 'all'}
-                            onPress={() => {
-                                setFilterType(option.value);
-                                setTypeMenuVisible(false);
-                            }}
-                            title={option.label}
-                        />
-                    ))}
-                </Menu>
+                            <Menu
+                                visible={typeMenuVisible}
+                                onDismiss={() => setTypeMenuVisible(false)}
+                                anchor={
+                                    <Button
+                                        mode="outlined"
+                                        onPress={() => setTypeMenuVisible(true)}
+                                        style={styles.filterButton}
+                                        icon="filter">
+                                        {filterType
+                                            ? typeOptions.find(
+                                                  opt =>
+                                                      opt.value === filterType,
+                                              )?.label ||
+                                              filterType.replace(/-/g, ' ')
+                                            : 'All Types'}
+                                    </Button>
+                                }>
+                                {typeOptions.map(option => (
+                                    <Menu.Item
+                                        key={option.value || 'all'}
+                                        onPress={() => {
+                                            setFilterType(option.value);
+                                            setTypeMenuVisible(false);
+                                        }}
+                                        title={option.label}
+                                    />
+                                ))}
+                            </Menu>
 
-                <Menu
-                    visible={dueMenuVisible}
-                    onDismiss={() => setDueMenuVisible(false)}
-                    anchor={
-                        <Button
-                            mode="outlined"
-                            onPress={() => setDueMenuVisible(true)}
-                            style={styles.filterButton}
-                            icon="calendar">
-                            {filterDueStatus
-                                ? dueStatusOptions.find(
-                                      opt => opt.value === filterDueStatus,
-                                  )?.label || 'Due Filter'
-                                : 'Due Date'}
-                        </Button>
-                    }>
-                    {dueStatusOptions.map(option => (
-                        <Menu.Item
-                            key={option.value || 'all'}
-                            onPress={() => {
-                                setFilterDueStatus(option.value);
-                                setDueMenuVisible(false);
-                            }}
-                            title={option.label}
-                        />
-                    ))}
-                </Menu>
+                            <Menu
+                                visible={dueMenuVisible}
+                                onDismiss={() => setDueMenuVisible(false)}
+                                anchor={
+                                    <Button
+                                        mode="outlined"
+                                        onPress={() => setDueMenuVisible(true)}
+                                        style={styles.filterButton}
+                                        icon="calendar">
+                                        {filterDueStatus
+                                            ? dueStatusOptions.find(
+                                                  opt =>
+                                                      opt.value ===
+                                                      filterDueStatus,
+                                              )?.label || 'Due Filter'
+                                            : 'Due Date'}
+                                    </Button>
+                                }>
+                                {dueStatusOptions.map(option => (
+                                    <Menu.Item
+                                        key={option.value || 'all'}
+                                        onPress={() => {
+                                            setFilterDueStatus(option.value);
+                                            setDueMenuVisible(false);
+                                        }}
+                                        title={option.label}
+                                    />
+                                ))}
+                            </Menu>
 
-                {(filterTerm || filterType || filterDueStatus) && (
-                    <Button
-                        mode="text"
-                        onPress={() => {
-                            setFilterTerm(null);
-                            setFilterType(null);
-                            setFilterDueStatus(null);
-                        }}
-                        icon="close">
-                        Clear
-                    </Button>
-                )}
-            </View>
-            <FlatList
-                data={filteredClassworks || []}
-                keyExtractor={item => item.id.toString()}
-                renderItem={renderItem}
-                // renderItem={({item: assignment}) => (
-                //     <AssignmentItem
-                //         assignment={assignment}
-                //         activePanels={activePanels}
-                //         handlePanelChange={handlePanelChange}
-                //         handleSubmission={handleSubmission}
-                //         getFileIcon={getFileIcon}
-                //         getDueStatus={getDueStatus}
-                //     />
-                // )}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Icon
-                            name="document-text-outline"
-                            size={48}
-                            color="#999"
-                        />
-                        <Text style={styles.emptyText}>
-                            {filterTerm || filterType || filterDueStatus
-                                ? 'No assignments match your filters'
-                                : 'No assignments found'}
-                        </Text>
-                        {!isLoading && (
-                            <Button
-                                mode="contained-tonal"
-                                onPress={() => refetch()}
-                                style={styles.retryButton}>
-                                Refresh
-                            </Button>
-                        )}
-                    </View>
-                }
-                contentContainerStyle={styles.listContent}
-                style={globalStyle.container}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={isFetching}
-                        onRefresh={refetch}
-                        colors={[theme.colors.primary]}
-                        tintColor={theme.colors.primary}
-                    />
-                }
-                initialNumToRender={5}
-                maxToRenderPerBatch={5}
-                windowSize={10}
-                updateCellsBatchingPeriod={50}
-                removeClippedSubviews={true}
-                ListHeaderComponent={
-                    filteredClassworks?.length > 0 ? (
-                        <Text style={styles.listHeader}>
-                            {filteredClassworks.length} classwork
-                            {filteredClassworks.length !== 1 ? 's' : ''}
                             {(filterTerm || filterType || filterDueStatus) && (
-                                <Text style={styles.filteredText}>
-                                    {' '}
-                                    (filtered)
-                                </Text>
+                                <Button
+                                    mode="text"
+                                    onPress={() => {
+                                        setFilterTerm(null);
+                                        setFilterType(null);
+                                        setFilterDueStatus(null);
+                                    }}
+                                    icon="close">
+                                    Clear
+                                </Button>
                             )}
-                        </Text>
-                    ) : null
-                }
-            />
+                        </View>
+                    </Animated.View>
+                    <AnimatedFlatList
+                        showsVerticalScrollIndicator={false}
+                        data={filteredClassworks || []}
+                        keyExtractor={item => item.id.toString()}
+                        renderItem={renderItem}
+                        onScroll={onScroll}
+                        scrollEventThrottle={16}
+                        ListEmptyComponent={() =>
+                            !isLoading ? (
+                                <View style={globalStyle.emptyContainer}>
+                                    <Avatar.Icon
+                                        size={64}
+                                        icon="clipboard-text-outline"
+                                        style={globalStyle.emptyIcon}
+                                    />
+                                    <Text style={globalStyle.emptyTitle}>
+                                        No Classwork Assigned
+                                    </Text>
+                                    <Text style={globalStyle.emptySubtitle}>
+                                        When your teacher assigns classwork, it
+                                        will show up here.
+                                    </Text>
+                                </View>
+                            ) : null
+                        }
+                        contentContainerStyle={styles.listContent}
+                        style={globalStyle.container}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isFetching}
+                                onRefresh={refetch}
+                                colors={[theme.colors.primary]}
+                                tintColor={theme.colors.primary}
+                            />
+                        }
+                        initialNumToRender={5}
+                        maxToRenderPerBatch={5}
+                        windowSize={10}
+                        updateCellsBatchingPeriod={50}
+                        removeClippedSubviews={true}
+                        ListHeaderComponent={
+                            filteredClassworks?.length > 0 ? (
+                                <Text style={styles.listHeader}>
+                                    {filteredClassworks.length} classwork
+                                    {filteredClassworks.length !== 1 ? 's' : ''}
+                                    {(filterTerm ||
+                                        filterType ||
+                                        filterDueStatus) && (
+                                        <Text style={styles.filteredText}>
+                                            {' '}
+                                            (filtered)
+                                        </Text>
+                                    )}
+                                </Text>
+                            ) : null
+                        }
+                    />
+                </>
+            )}
         </>
     );
 };
@@ -704,6 +788,15 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
     },
     filterContainer: {
+        position: 'absolute',
+        top: 15,
+        left: 0,
+        right: 0,
+        height: 100,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    filterContainerContent: {
         flexDirection: 'row',
         paddingHorizontal: 16,
         paddingVertical: 8,
@@ -753,8 +846,22 @@ const styles = StyleSheet.create({
         height: 44,
     },
     rippleContainer: {
-        borderRadius: 8, // Match your card's border radius
-        margin: 4, // Optional margin for the ripple effect
+        borderRadius: 8,
+        margin: 4,
+    },
+    listContent: {
+        paddingTop: 100,
+        paddingBottom: 25,
+    },
+    termWrapper: {
+        position: 'absolute',
+        right: 0,
+        paddingLeft: 5,
+        paddingRight: 5,
+        paddingBottom: 2,
+    },
+    termText: {
+        fontSize: 12,
     },
 });
 

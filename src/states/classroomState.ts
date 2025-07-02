@@ -6,6 +6,22 @@ import axiosConfig from '../utils/axiosConfig';
 
 const useClassroomStore = create(set => ({
     studentSubmission: false,
+    currentUser: {
+        id: null,
+        name: '',
+        role: '',
+        email: '',
+    },
+    otherUser: {
+        id: null,
+        name: '',
+        role: '',
+        email: '',
+    },
+    faculty: null,
+    classwork: null,
+    classworkDetails: false,
+    formLink: false,
     setField: (key, value) => set(() => ({[key]: value})),
     storeStudentWorkLink: async (params: any) => {
         await delay(1000);
@@ -21,7 +37,6 @@ const useClassroomStore = create(set => ({
             }));
     },
     storeStudentSubmission: async (params: any) => {
- 
         const formData = new FormData();
 
         // Append all parameters to formData

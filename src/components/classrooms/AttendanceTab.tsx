@@ -10,12 +10,19 @@ import {
     RadioButton,
     Button,
     useTheme,
+    Avatar,
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import useClassroomAttendance from '../../hooks/useClassroomAttendance';
 import {useRoute} from '@react-navigation/native';
 import {formatDate} from '../../utils/helper';
 import {useGlobalStyles} from '../../styles/globalStyles';
+import useStatusIcon from '../../hooks/useStatusIcon';
+
+const StatusIcon = React.memo(({status}) => {
+    const icon = useStatusIcon(status);
+    return icon;
+});
 
 const AttendanceTab = () => {
     const globalStyle = useGlobalStyles();
@@ -58,19 +65,6 @@ const AttendanceTab = () => {
         a => a.status === 'late',
     ).length;
     const totalDays = filteredAttendances.length;
-
-    const getStatusIcon = status => {
-        switch (status) {
-            case 'present':
-                return <Icon name="check-circle" size={20} color="#4CAF50" />;
-            case 'absent':
-                return <Icon name="close-circle" size={20} color="#F44336" />;
-            case 'late':
-                return <Icon name="clock-alert" size={20} color="#FF9800" />;
-            default:
-                return null;
-        }
-    };
 
     return (
         <ScrollView
@@ -138,32 +132,41 @@ const AttendanceTab = () => {
                     <DataTable.Title>Status</DataTable.Title>
                 </DataTable.Header>
 
-                {filteredAttendances.map((record, index) => (
-                    <DataTable.Row key={index}>
-                        <DataTable.Cell style={styles.dateTime}>
-                            {formatDate(record.date_time, true)}
-                        </DataTable.Cell>
-                        <DataTable.Cell style={styles[`${record.status}Cell`]}>
-                            <View style={styles.statusContainer}>
-                                {getStatusIcon(record.status)}
-                                <Text style={styles.statusText}>
-                                    {record.status.charAt(0).toUpperCase() +
-                                        record.status.slice(1)}
-                                    {record.time ? ` (${record.time})` : ''}
-                                </Text>
-                            </View>
-                        </DataTable.Cell>
-                    </DataTable.Row>
-                ))}
-
-                {/* {attendanceDates.map((record, index) => (
-                    <DataTable.Row key={index}>
-                        <DataTable.Cell>  {formatDate(record)}</DataTable.Cell>
-                        <DataTable.Cell>
-                            12-04-2024
-                        </DataTable.Cell>
-                    </DataTable.Row>
-                ))} */}
+                {filteredAttendances.length === 0 ? (
+                    <View style={globalStyle.emptyContainer}>
+                        <Avatar.Icon
+                            size={64}
+                            icon="calendar-remove-outline"
+                            style={globalStyle.emptyIcon}
+                        />
+                        <Text style={globalStyle.emptyTitle}>
+                            No Attendance Records
+                        </Text>
+                        <Text style={globalStyle.emptySubtitle}>
+                            Attendance data will appear here once it's
+                            available.
+                        </Text>
+                    </View>
+                ) : (
+                    filteredAttendances.map((record, index) => (
+                        <DataTable.Row key={index}>
+                            <DataTable.Cell style={styles.dateTime}>
+                                {formatDate(record.date_time, true)}
+                            </DataTable.Cell>
+                            <DataTable.Cell
+                                style={globalStyle[`${record.status}Cell`]}>
+                                <View style={globalStyle.statusContainer}>
+                                    <StatusIcon status={record.status} />
+                                    <Text style={globalStyle.statusText}>
+                                        {record.status.charAt(0).toUpperCase() +
+                                            record.status.slice(1)}
+                                        {record.time ? ` (${record.time})` : ''}
+                                    </Text>
+                                </View>
+                            </DataTable.Cell>
+                        </DataTable.Row>
+                    ))
+                )}
             </DataTable>
         </ScrollView>
     );

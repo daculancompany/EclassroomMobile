@@ -10,21 +10,65 @@ import {
     Linking,
     Dimensions,
 } from 'react-native';
-import {useTheme} from 'react-native-paper';
-// import RenderHtml from 'react-native-render-html';
+import {useTheme, Card} from 'react-native-paper';
+// import {WebView} from 'react-native-webview';
+import RenderHtml from 'react-native-render-html';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const AssignmentItem = ({
-    assignment,
-    activePanels,
-    handlePanelChange,
-    handleSubmission,
-    getFileIcon,
-    getDueStatus,
-}) => {
+const AssignmentItem = ({assignment}) => {
+    const getFileIcon = ext => {
+        switch (ext) {
+            case 'pdf':
+                return 'file-pdf-box';
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+                return 'image';
+            case 'doc':
+            case 'docx':
+                return 'file-word';
+            default:
+                return 'link';
+        }
+    };
+
+    const getFileColor = ext => {
+        // const ext = url.split('.').pop()?.toLowerCase();
+        switch (ext) {
+            case 'pdf':
+                return '#F40F02'; // Red for PDF
+            case 'jpg':
+            case 'jpeg':
+            case 'png':
+                return '#02A0F7'; // Blue for images
+            default:
+                return '#939393'; // Gray for others
+        }
+    };
+
+    const getDueStatus = dueDate => {
+        if (!dueDate) return 'no-due';
+
+        const now = new Date();
+        const due = new Date(dueDate);
+
+        // Set up date ranges for comparison
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0); // Start of today
+        const todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999); // End of today
+        const oneWeekFromNow = new Date(
+            now.getTime() + 7 * 24 * 60 * 60 * 1000,
+        );
+
+        if (due < todayStart) return 'overdue';
+        if (due >= todayStart && due <= todayEnd) return 'due-today'; // Due today
+        if (due < oneWeekFromNow) return 'due-soon';
+        return 'not-due';
+    };
+
     const theme = useTheme();
     const {width} = Dimensions.get('window');
-    const isActive = activePanels.includes(assignment.id);
 
     const baseStyle = {
         color: theme.colors.text,
@@ -33,7 +77,7 @@ const AssignmentItem = ({
         lineHeight: 24,
     };
 
-    const dueStatus = getDueStatus(assignment.due_date);
+    const dueStatus = getDueStatus(assignment?.due_date);
 
     const handleLinkPress = async url => {
         const supported = await Linking.canOpenURL(url);
@@ -91,43 +135,23 @@ const AssignmentItem = ({
     };
 
     return (
-        <View
-            style={[
-                styles.card,
-                {
-                    backgroundColor: theme.colors.surface,
-                    marginBottom: 16,
-                    borderColor: theme.colors.outline,
-                    borderWidth: 1,
-                },
-            ]}>
-            <View style={styles.content}>
+        <Card style={{margin: 15}}>
+            <Card.Content>
                 {/* Header Row */}
-                <TouchableOpacity
-                    onPress={() => handlePanelChange([assignment.id])}
-                    style={styles.headerRow}>
-                    <View style={styles.headerRowInner}>
-                        <View style={styles.titleWrapper}>
-                            <Icon
-                                name="clipboard-text"
-                                size={24}
-                                color={theme.colors.primary}
-                            />
-                            <Text
-                                style={[
-                                    styles.title,
-                                    {color: theme.colors.text},
-                                ]}>
-                                {assignment.title}
-                            </Text>
-                        </View>
+
+                <View style={styles.headerRowInner}>
+                    <View style={styles.titleWrapper}>
                         <Icon
-                            name={isActive ? 'chevron-up' : 'chevron-down'}
+                            name="clipboard-text"
                             size={24}
-                            color={theme.colors.text}
+                            color={theme.colors.primary}
                         />
+                        <Text
+                            style={[styles.title, {color: theme.colors.text}]}>
+                            {assignment.title}
+                        </Text>
                     </View>
-                </TouchableOpacity>
+                </View>
 
                 {/* Meta Row */}
                 <View style={styles.metaRow}>
@@ -273,149 +297,161 @@ const AssignmentItem = ({
                         </View>
                     </View>
                 </View>
+                <Text style={[styles.sectionTitle, {color: theme.colors.text}]}>
+                    Instructions
+                </Text>
+                <RenderHtml
+                    contentWidth={width}
+                    source={{
+                        html:
+                            assignment?.instructions ||
+                            '<p>No instructions provided</p>',
+                    }}
+                    baseStyle={baseStyle}
+                    tagsStyles={{
+                        p: {marginBottom: 10},
+                        ul: {marginBottom: 10},
+                        ol: {marginBottom: 10},
+                    }}
+                />
+                {/* <WebView
+                        originWhitelist={['*']}
+                        source={{
+                            html: `
+                                <html>
+                                    <head>
+                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                        <style>
+                                            body {
+                                                color: ${theme.colors.text};
+                                                font-size: 16px;
+                                                padding: 12px;
+                                            }
+                                        </style>
+                                    </head>
+                                    <body>
+                                        ${assignment?.instructions || 'No instructions provided'}
+                                    </body>
+                                </html>
+                            `,
+                        }}
+                        style={{height: 700, backgroundColor: theme.colors.surface }} // Adjust height as needed
+                    /> */}
 
-                <ScrollView>
-                    {/* Instructions Section */}
-                    <Text
-                        style={[
-                            styles.sectionTitle,
-                            {color: theme.colors.text},
-                        ]}>
-                        Instructions
-                    </Text>
-                    {/* Attachments Section */}
-                    {Array.isArray(assignment.attachment) &&
-                        assignment.attachment.length > 0 && (
-                            <>
-                                <Text
-                                    style={[
-                                        styles.sectionTitle,
-                                        {color: theme.colors.text},
-                                    ]}>
-                                    Files
-                                </Text>
-                                <View
-                                    style={[
-                                        styles.sectionCard,
-                                        {
-                                            backgroundColor:
-                                                theme.colors.surfaceVariant,
-                                        },
-                                    ]}>
-                                    {assignment.attachment.map(
-                                        (item, index) => (
-                                            <TouchableOpacity
-                                                key={index}
-                                                style={styles.listItem}
-                                                onPress={() =>
-                                                    handleLinkPress(
-                                                        item?.file_link,
-                                                    )
-                                                }>
-                                                <View
-                                                    style={
-                                                        styles.listItemContent
-                                                    }>
-                                                    <Icon
-                                                        name={getFileIcon(
-                                                            'pdf',
-                                                        )}
-                                                        size={24}
-                                                        color={
-                                                            theme.colors.text
-                                                        }
-                                                    />
-                                                    <View
-                                                        style={
-                                                            styles.listItemText
-                                                        }>
-                                                        <Text
-                                                            style={{
-                                                                color: theme
-                                                                    .colors
-                                                                    .text,
-                                                            }}>
-                                                            {item?.file_name ||
-                                                                'File'}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: theme
-                                                                    .colors
-                                                                    .secondary,
-                                                                fontSize: 12,
-                                                            }}>
-                                                            PDF file
-                                                        </Text>
-                                                    </View>
-                                                </View>
-                                                <Icon
-                                                    name="download"
-                                                    size={24}
-                                                    color={theme.colors.text}
-                                                />
-                                            </TouchableOpacity>
-                                        ),
-                                    )}
-                                </View>
-                            </>
-                        )}
-
-                    {/* Links Section */}
-                    {Array.isArray(assignment?.links) &&
-                        assignment?.links.length > 0 && (
-                            <>
-                                <Text
-                                    style={[
-                                        styles.sectionTitle,
-                                        {color: theme.colors.text},
-                                    ]}>
-                                    Links
-                                </Text>
-                                <View
-                                    style={[
-                                        styles.sectionCard,
-                                        {
-                                            backgroundColor:
-                                                theme.colors.surfaceVariant,
-                                        },
-                                    ]}>
-                                    {assignment.links.map((item, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={styles.listItem}
-                                            onPress={() =>
-                                                handleLinkPress(item?.link)
-                                            }>
-                                            <View
-                                                style={styles.listItemContent}>
-                                                <Icon
-                                                    name="link"
-                                                    size={24}
-                                                    color={theme.colors.text}
-                                                />
+                {/* Attachments Section */}
+                {Array.isArray(assignment.attachment) &&
+                    assignment.attachment.length > 0 && (
+                        <>
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    {color: theme.colors.text},
+                                ]}>
+                                Files
+                            </Text>
+                            <View
+                                style={[
+                                    styles.sectionCard,
+                                    {
+                                        backgroundColor:
+                                            theme.colors.surfaceVariant,
+                                    },
+                                ]}>
+                                {assignment.attachment.map((item, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.listItem}
+                                        onPress={() =>
+                                            handleLinkPress(item?.file_link)
+                                        }>
+                                        <View style={styles.listItemContent}>
+                                            <Icon
+                                                name={getFileIcon('pdf')}
+                                                size={24}
+                                                color={theme.colors.text}
+                                            />
+                                            <View style={styles.listItemText}>
                                                 <Text
                                                     style={{
                                                         color: theme.colors
                                                             .text,
-                                                    }}
-                                                    numberOfLines={2}>
-                                                    {item?.link}
+                                                    }}>
+                                                    {item?.file_name || 'File'}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        color: theme.colors
+                                                            .secondary,
+                                                        fontSize: 12,
+                                                    }}>
+                                                    PDF file
                                                 </Text>
                                             </View>
+                                        </View>
+                                        <Icon
+                                            name="download"
+                                            size={24}
+                                            color={theme.colors.text}
+                                        />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </>
+                    )}
+
+                {/* Links Section */}
+                {Array.isArray(assignment?.links) &&
+                    assignment?.links.length > 0 && (
+                        <>
+                            <Text
+                                style={[
+                                    styles.sectionTitle,
+                                    {color: theme.colors.text},
+                                ]}>
+                                Links
+                            </Text>
+                            <View
+                                style={[
+                                    styles.sectionCard,
+                                    {
+                                        backgroundColor:
+                                            theme.colors.surfaceVariant,
+                                    },
+                                ]}>
+                                {assignment.links.map((item, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.listItem}
+                                        onPress={() =>
+                                            handleLinkPress(item?.link)
+                                        }>
+                                        <View style={styles.listItemContent}>
                                             <Icon
-                                                name="open-in-new"
+                                                name="link"
                                                 size={24}
                                                 color={theme.colors.text}
                                             />
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </>
-                        )}
+                                            <Text
+                                                style={{
+                                                    color: theme.colors.text,
+                                                }}
+                                                numberOfLines={2}>
+                                                {item?.link}
+                                            </Text>
+                                        </View>
+                                        <Icon
+                                            name="open-in-new"
+                                            size={24}
+                                            color={theme.colors.text}
+                                        />
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </>
+                    )}
 
-                    {/* Buttons Row */}
-                    <View style={styles.buttonRow}>
+                {/* Buttons Row */}
+                {/* <View style={styles.buttonRow}>
                         <TouchableOpacity
                             style={[
                                 styles.button,
@@ -466,10 +502,9 @@ const AssignmentItem = ({
                                 </Text>
                             </TouchableOpacity>
                         )}
-                    </View>
-                </ScrollView>
-            </View>
-        </View>
+                    </View> */}
+            </Card.Content>
+        </Card>
     );
 };
 
@@ -503,6 +538,7 @@ const styles = StyleSheet.create({
     },
     metaRow: {
         marginBottom: 12,
+        marginTop: 20,
     },
     chipContainer: {
         flexDirection: 'row',
