@@ -22,6 +22,7 @@
 		CD4A9EA04DF046B99FC82214 /* Lato-Thin.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8E6EFFEB8D78456AA13A4EFF /* Lato-Thin.ttf */; };
 		2FB7709DAE854D159211881C /* Lato-ThinItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F4909B3DFF344E4AB1956F11 /* Lato-ThinItalic.ttf */; };
 		1C1BC4A14E9F476D8B5DB3CE /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 713D3BD1FA6F4462AA1455C9 /* OFL.txt */; };
+		B274CB8132E34331B48494FF /* new-notification.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3EE4BEBD749748EEBB21A30B /* new-notification.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 		8E6EFFEB8D78456AA13A4EFF /* Lato-Thin.ttf */ = {isa = PBXFileReference; name = "Lato-Thin.ttf"; path = "../assets/fonts/Lato-Thin.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		F4909B3DFF344E4AB1956F11 /* Lato-ThinItalic.ttf */ = {isa = PBXFileReference; name = "Lato-ThinItalic.ttf"; path = "../assets/fonts/Lato-ThinItalic.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		713D3BD1FA6F4462AA1455C9 /* OFL.txt */ = {isa = PBXFileReference; name = "OFL.txt"; path = "../assets/fonts/OFL.txt"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		3EE4BEBD749748EEBB21A30B /* new-notification.mp3 */ = {isa = PBXFileReference; name = "new-notification.mp3"; path = "../assets/sounds/new-notification.mp3"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +155,7 @@
 				8E6EFFEB8D78456AA13A4EFF /* Lato-Thin.ttf */,
 				F4909B3DFF344E4AB1956F11 /* Lato-ThinItalic.ttf */,
 				713D3BD1FA6F4462AA1455C9 /* OFL.txt */,
+				3EE4BEBD749748EEBB21A30B /* new-notification.mp3 */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -238,6 +241,7 @@
 				CD4A9EA04DF046B99FC82214 /* Lato-Thin.ttf in Resources */,
 				2FB7709DAE854D159211881C /* Lato-ThinItalic.ttf in Resources */,
 				1C1BC4A14E9F476D8B5DB3CE /* OFL.txt in Resources */,
+				B274CB8132E34331B48494FF /* new-notification.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

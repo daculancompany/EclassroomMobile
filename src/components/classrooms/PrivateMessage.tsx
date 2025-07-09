@@ -10,6 +10,7 @@ import {
     Keyboard,
     TextInput as TextInputreact,
     ImageBackground,
+    RefreshControl,
 } from 'react-native';
 import {
     TextInput,
@@ -29,6 +30,7 @@ import {
 import axiosConfig from '../../utils/axiosConfig';
 import LinearGradient from 'react-native-linear-gradient';
 import useClassroomStore from '../../states/classroomState';
+import {BASE_URL} from '../../utils/constant';
 
 const PrivateMessage = ({classworkId}) => {
     const theme = useTheme();
@@ -39,7 +41,7 @@ const PrivateMessage = ({classworkId}) => {
     const [initialLoad, setInitialLoad] = useState(true);
     const [unreadMessages, setUnreadMessages] = useState([]);
     const [loading, setLoading] = useState(false);
-    const {currentUser, otherUser, classworkDetails} = useClassroomStore();
+    const {currentUser, otherUser, classwork} = useClassroomStore();
 
     // WhatsApp color scheme
     const whatsAppColors = {
@@ -71,14 +73,19 @@ const PrivateMessage = ({classworkId}) => {
             },
         },
     );
- 
+
     // Fetch messages with React Query
-    const {data: messages = [], isFetching} = useQuery(
+    const {
+        data: messages = [],
+        isFetching,
+        refetch,
+        isLoading,
+    } = useQuery(
         ['classworkMessages', classworkId],
         async () => {
             const response = await axiosConfig.get(
-                            `classwork/${classworkId}/messages/${currentUser?.id}`
-                        );
+                `classwork/${classworkId}/messages/${currentUser?.id}`,
+            );
             return response.data.map(msg => ({
                 ...msg,
                 sender:
@@ -87,8 +94,8 @@ const PrivateMessage = ({classworkId}) => {
             }));
         },
         {
-            enabled: classworkDetails,
-            refetchInterval: 3000,
+            enabled: classwork ? true : false,
+            refetchInterval: 10000,
             onSuccess: data => {
                 const previousData = queryClient.getQueryData([
                     'classworkMessages',
@@ -116,7 +123,9 @@ const PrivateMessage = ({classworkId}) => {
             },
         },
     );
-    
+
+
+
     // Send message mutation
     const {mutate: sendMessage} = useMutation(
         async messageData => {
@@ -201,18 +210,17 @@ const PrivateMessage = ({classworkId}) => {
         }
     }, [messages, shouldScroll]);
 
-    
     const handleSendMessage = () => {
         if (!newMessage.trim()) return;
         const messageData = {
             classwork_id: classworkId,
             message: newMessage,
             sender_id: currentUser.id,
-            [currentUser.role + "_id"]: currentUser.id,
-            [otherUser.role + "_id"]: otherUser.id,
+            [currentUser.role + '_id']: currentUser.id,
+            [otherUser.role + '_id']: otherUser.id,
         };
         sendMessage(messageData);
-        setNewMessage("");
+        setNewMessage('');
     };
 
     // Message status indicator
@@ -336,10 +344,10 @@ const PrivateMessage = ({classworkId}) => {
 
             {/* Chat Area - FlatList */}
             <ImageBackground
-                source={{
-                    uri: 'https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png',
-                }}
-                style={styles.background}
+                // source={{
+                //     uri: `${BASE_URL}bg-message.png`,
+                // }}
+                style={[styles.background, {backgroundColor: '#fef1e8'}]}
                 resizeMode="cover">
                 <FlatList
                     showsVerticalScrollIndicator={false}
@@ -362,6 +370,12 @@ const PrivateMessage = ({classworkId}) => {
                             flatListRef.current?.scrollToEnd({animated: true});
                         }
                     }}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isFetching}
+                            onRefresh={() => refetch()}
+                        />
+                    }
                 />
             </ImageBackground>
             {/* Input Area */}
@@ -492,8 +506,8 @@ const styles = StyleSheet.create({
         fontSize: 10,
     },
     background: {
-    flex: 1,
-  },
+        flex: 1,
+    },
 });
 
 export default PrivateMessage;

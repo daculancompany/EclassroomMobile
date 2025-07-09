@@ -24,95 +24,15 @@ import useGradeSheet from '../../hooks/useGradeSheet';
 import {useRoute} from '@react-navigation/native';
 import BottomSheet from '../BottomSheet';
 import {useGlobalStyles} from '../../styles/globalStyles';
-import useStatusIcon from '../../hooks/useStatusIcon';
+
 import {formatDate} from '../../utils/helper';
+import ProgressReportSheet from './ProgressReportSheet';
 
 const {width} = Dimensions.get('window');
 const size = width - 40;
 const radius = size / 2;
 const centerX = size / 2;
 const centerY = size / 2;
-
-const StatusIcon = React.memo(({status}) => {
-    const icon = useStatusIcon(status);
-    return icon;
-});
-
-const AttendanceRow = ({record}) => {
-    const globalStyle = useGlobalStyles();
-    return (
-        <DataTable.Row>
-            <DataTable.Cell style={styles.dateTime}>
-                {formatDate(record.date_time, true)}
-            </DataTable.Cell>
-            <DataTable.Cell style={globalStyle[`${record.status}Cell`]}>
-                <View style={globalStyle.statusContainer}>
-                    <StatusIcon status={record.status} />
-                    <Text style={globalStyle.statusText}>
-                        {record.status.charAt(0).toUpperCase() +
-                            record.status.slice(1)}
-                        {record.time ? ` (${record.time})` : ''}
-                    </Text>
-                </View>
-            </DataTable.Cell>
-        </DataTable.Row>
-    );
-};
-
-const AttendanceTable = ({attendances}) => {
-    const globalStyle = useGlobalStyles();
-    return (
-        <>
-            <Text style={[globalStyle.textCenter, globalStyle.textPrimary]}>
-                ATTENDANCE
-            </Text>
-            <DataTable>
-                <DataTable.Header>
-                    <DataTable.Title>Date & Time</DataTable.Title>
-                    <DataTable.Title>Status</DataTable.Title>
-                </DataTable.Header>
-                {attendances.map((record, index) => (
-                    <AttendanceRow key={index} record={record} />
-                ))}
-            </DataTable>
-        </>
-    );
-};
-
-const OtherTable = ({title, quizes}) => {
-    const globalStyle = useGlobalStyles();
-    return (
-        <>
-            <View style={{marginVertical: 20}} />
-            <Text style={[globalStyle.textCenter, globalStyle.textPrimary]}>
-                {title}
-            </Text>
-            <DataTable>
-                <DataTable.Header>
-                    <DataTable.Title>Title</DataTable.Title>
-                    <DataTable.Title
-                        style={{maxWidth: 80, justifyContent: 'center'}}>
-                        Score
-                    </DataTable.Title>
-                </DataTable.Header>
-                {quizes.map((record, index) => (
-                    <DataTable.Row key={index}>
-                        <DataTable.Cell>
-                            <Text>{record?.title}</Text>
-                        </DataTable.Cell>
-                        <DataTable.Cell
-                            style={{maxWidth: 80, justifyContent: 'center'}}>
-                            <Text style={globalStyle.textCenter}>
-                                {record?.scores[0]?.score || 0}/
-                                {record?.points_possible}
-                            </Text>
-                        </DataTable.Cell>
-                    </DataTable.Row>
-                ))}
-            </DataTable>
-        </>
-    );
-};
 
 const initialData = [
     {
@@ -676,52 +596,17 @@ const CustomPieChart = () => {
 
     if (!sheet) return null;
 
-    const attendanceList = sheet.attendances || [];
-    const sliceMappings = [
-        {key: 'quizes', title: 'HANDS-ON QUIZ/ATTENDANCE'},
-        {key: 'exercises', title: 'LABORATORY EXERCISES/CASE STUDIES'},
-        {key: 'assignments', title: 'ASSIGNMENT/GROUP WORK'},
-        {key: 'midterm', title: 'MIDTERM EXAM'},
-    ];
-
-    const sliceMappings2 = [
-        {key: 'fquizes', title: 'HANDS-ON QUIZ/ATTENDANCE'},
-        {key: 'fexercises', title: 'LABORATORY EXERCISES/CASE STUDIES'},
-        {key: 'fassignments', title: 'ASSIGNMENT/GROUP WORK'},
-        {key: 'final', title: 'FINAL EXAM'},
-    ];
-
-    let quizesList = [];
-    let titleData = null;
-
-    const selected = sliceMappings[selectedSlice];
-    if (selected) {
-        quizesList = sheet[selected.key] || [];
-        titleData = selected.title;
-    }
-    const selected2 = sliceMappings2[selectedSlice2];
-    if (selected2) {
-        quizesList = sheet[selected2.key] || [];
-        titleData = selected2.title;
-    }
+    
 
     return (
         <>
-            <BottomSheet
-                heightPercentage={0.9}
+            <ProgressReportSheet
+                sheet={sheet}
                 visible={visible}
-                isScroll={true}
-                onDismiss={() => {
-                    setSelectedSlice(null);
-                    setVisible(false);
-                }}>
-                <>
-                    {selectedSlice === 0 && (
-                        <AttendanceTable attendances={attendanceList} />
-                    )}
-                    <OtherTable title={titleData} quizes={quizesList} />
-                </>
-            </BottomSheet>
+                selectedSlice={selectedSlice}
+                selectedSlice2={selectedSlice2}
+                onDismiss={() => setVisible(false)}
+            />
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{padding: 20}}

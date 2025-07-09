@@ -12,6 +12,9 @@ import {
     Dimensions,
     TouchableWithoutFeedback,
     Keyboard,
+    InteractionManager,
+    Linking,
+    RefreshControl,
 } from 'react-native';
 import {
     Card,
@@ -28,6 +31,7 @@ import {
     ActivityIndicator,
     Menu,
     Chip,
+    List,
 } from 'react-native-paper';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -38,11 +42,47 @@ import {DEFAULT_BANNER, HERO_IMAGE} from '../../utils/constant';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import EmojiPicker from 'rn-emoji-keyboard';
 import {useGlobalStyles} from '../../styles/globalStyles';
+import {useTabNavigation} from 'react-native-paper-tabs';
 import {
     SimpleLoading,
     ChatLoading,
 } from './../../components/AdvancedGradientShimmer';
 dayjs.extend(relativeTime);
+
+const formatFileSize = bytes => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const getFileIcon = mimeType => {
+    if (!mimeType) {
+        return {icon: 'paperclip', color: '#1890ff'};
+    }
+
+    if (mimeType.includes('image/'))
+        return {icon: 'file-image', color: '#52c41a'};
+    if (mimeType.includes('pdf'))
+        return {icon: 'file-pdf-box', color: '#ff4d4f'};
+    if (
+        mimeType.includes('word') ||
+        mimeType.includes('msword') ||
+        mimeType.includes('document')
+    )
+        return {icon: 'file-word-box', color: '#2b579a'};
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet'))
+        return {icon: 'file-excel-box', color: '#217346'};
+    if (mimeType.includes('powerpoint') || mimeType.includes('presentation'))
+        return {icon: 'file-powerpoint-box', color: '#d24726'};
+    if (mimeType.includes('text/'))
+        return {icon: 'file-document-outline', color: '#595959'};
+    if (mimeType.includes('zip') || mimeType.includes('compressed'))
+        return {icon: 'folder-zip', color: '#faad14'};
+
+    return {icon: 'paperclip', color: '#1890ff'};
+};
 
 const {height} = Dimensions.get('window');
 
@@ -506,10 +546,11 @@ const ReplyItem = React.memo(({reply, onLike, onDelete, userID, theme}) => {
 });
 
 const BroadcastPage = () => {
+    const goTo = useTabNavigation();
     const globalStyle = useGlobalStyles();
     const theme = useTheme();
     const route = useRoute();
-    const {class_id: id} = route.params || {};
+    const {class_id: id, id: classworkId, ntype} = route.params || {};
     const queryClient = useQueryClient();
     const [description, setDescription] = useState('');
     const [title, setTitle] = useState('');
@@ -532,6 +573,16 @@ const BroadcastPage = () => {
                 .get(`faculties/classroom-settings/${id}`)
                 .then(res => res.data),
     );
+
+    useEffect(() => {
+        const task = InteractionManager.runAfterInteractions(() => {
+            if (ntype === 'classwork') {
+                goTo(1);
+            }
+        });
+
+        return () => task.cancel();
+    }, [id, classworkId, ntype]);
 
     // Fetch announcements with polling
     const {
@@ -1069,8 +1120,8 @@ const BroadcastPage = () => {
                 showsVerticalScrollIndicator={false}
                 loading={true}
                 ref={flatListRef}
-                refreshing={refreshing}
-                onRefresh={onRefreshAnnoucement}
+                // refreshing={refreshing}
+                // onRefresh={onRefreshAnnoucement}
                 data={announcements}
                 keyExtractor={item => item.id.toString()}
                 initialNumToRender={5}
@@ -1116,7 +1167,36 @@ const BroadcastPage = () => {
                             </Text>
 
                             <Text variant="bodyMedium">{item.description}</Text>
+                            {Array.isArray(item?.attachments) &&
+                                item?.attachments.map(attach => {
+                                    const {icon, color} = getFileIcon(
+                                        attach.mime_type,
+                                    );
 
+                                    return (
+                                        <List.Item
+                                            key={attach.id}
+                                            title={attach.name}
+                                            description={formatFileSize(
+                                                attach.size,
+                                            )}
+                                            onPress={() =>
+                                                Linking.openURL(attach.url)
+                                            }
+                                            left={() => (
+                                                <Avatar.Icon
+                                                    icon={icon}
+                                                    size={40}
+                                                    style={{
+                                                        backgroundColor:
+                                                            'transparent',
+                                                    }}
+                                                    color={color}
+                                                />
+                                            )}
+                                        />
+                                    );
+                                })}
                             <View
                                 style={[
                                     styles.announcementStats,
@@ -1157,6 +1237,12 @@ const BroadcastPage = () => {
                             </Text>
                         </View>
                     ) : null
+                }
+                refreshControl={
+                    <RefreshControl
+                        refreshing={fechingAnnoucment}
+                        onRefresh={() => refetchAnnouncement()}
+                    />
                 }
             />
 

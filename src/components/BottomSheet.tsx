@@ -1,266 +1,221 @@
-//@ts-nocheck
-import React, {useRef, useState, useEffect} from 'react';
+// @ts-nocheck
+import React, {useRef, useEffect, useState} from 'react';
 import {
-    View,
-    StyleSheet,
-    Dimensions,
-    TouchableWithoutFeedback,
-    Keyboard,
-    SafeAreaView,
-    Animated,
-    Easing,
-    ScrollView,
+  View,
+  TouchableWithoutFeedback,
+  Animated,
+  Dimensions,
+  StyleSheet,
+  PanResponder,
+  Keyboard,
+  Easing,
+  Platform,
+  KeyboardAvoidingView,
+  TouchableOpacity,
 } from 'react-native';
-import {Portal, Modal, useTheme} from 'react-native-paper';
-import {PanGestureHandler, State} from 'react-native-gesture-handler';
-import {BlurView} from '@react-native-community/blur';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useTheme, Text} from 'react-native-paper';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-const useStyles = () => {
-    const theme = useTheme();
-
-    return StyleSheet.create({
-        modal: {
-            margin: 0,
-            justifyContent: 'flex-end',
-            backgroundColor: 'transparent',
-        },
-        backdrop: {
-            ...StyleSheet.absoluteFillObject,
-        },
-        container: {
-            backgroundColor: theme.colors.background,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOffset: {
-                width: 0,
-                height: -5,
-            },
-            shadowOpacity: 0.2,
-            shadowRadius: 10,
-            elevation: 10,
-        },
-        safeArea: {
-            flex: 1,
-        },
-        header: {
-            paddingVertical: 12,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        dragHandleContainer: {
-            width: 60,
-            height: 15,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        dragHandle: {
-            width: 50,
-            height: 6,
-            backgroundColor: theme.colors.onSurfaceVariant,
-            borderRadius: 4,
-            opacity: 0.8,
-        },
-        closeButton: {
-            position: 'absolute',
-            right: 16,
-            top: 12,
-        },
-        contentContainer: {
-            flex: 1,
-            paddingBottom: 20,
-        },
-    });
-};
-
 const BottomSheet = ({
-    visible,
-    onDismiss,
-    children,
-    enablePanGesture = true,
-    showDragHandle = true,
-    showCloseButton = true,
-    heightPercentage = 0.9,
-    isScroll = false,
+  visible,
+  onDismiss,
+  children,
+  heightPercentage = 0.90,
 }) => {
-    const styles = useStyles();
-    const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
-    const [isScrollAtTop, setIsScrollAtTop] = useState(true);
-    const panGestureRef = useRef();
-    const scrollViewRef = useRef();
-    const startY = useRef(0);
+  const theme = useTheme();
+  const [isMounted, setIsMounted] = useState(visible);
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const offsetY = useRef(0);
+  const height = SCREEN_HEIGHT * 0.90;
 
-    const modalHeight = SCREEN_HEIGHT * heightPercentage;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+      onPanResponderMove: (_, gestureState) => {
+        const newY = gestureState.dy + offsetY.current;
+        if (newY > 0) translateY.setValue(newY);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const dragDistance = gestureState.dy;
+        const velocity = gestureState.vy;
+        const shouldClose = dragDistance > 120 || velocity > 1.2;
 
-    useEffect(() => {
-        if (visible) {
-            translateY.setValue(SCREEN_HEIGHT);
-            fadeAnim.setValue(0);
-
-            Animated.parallel([
-                Animated.spring(translateY, {
-                    toValue: 0,
-                    speed: 30,
-                    bounciness: 8,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 200,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+        if (shouldClose) {
+          Animated.timing(translateY, {
+            toValue: SCREEN_HEIGHT,
+            duration: 250,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsMounted(false);
+            onDismiss?.();
+          });
         } else {
-            Animated.parallel([
-                Animated.timing(translateY, {
+          Animated.spring(translateY, {
+            toValue: SCREEN_HEIGHT - height,
+            bounciness: 5,
+            useNativeDriver: true,
+          }).start(() => {
+            offsetY.current = 0;
+          });
+        }
+      },
+    })
+  ).current;
+
+  useEffect(() => {
+    if (visible) {
+      setIsMounted(true);
+      Animated.timing(translateY, {
+        toValue: SCREEN_HEIGHT - height,
+        duration: 250,
+        easing: Easing.out(Easing.poly(4)),
+        useNativeDriver: true,
+      }).start(() => {
+        offsetY.current = 0;
+      });
+    } else {
+      Animated.timing(translateY, {
+        toValue: SCREEN_HEIGHT,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsMounted(false);
+        onDismiss?.();
+      });
+    }
+  }, [visible]);
+
+  if (!isMounted) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <TouchableWithoutFeedback
+        onPress={() => {
+          Keyboard.dismiss();
+          Animated.timing(translateY, {
+            toValue: SCREEN_HEIGHT,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setIsMounted(false);
+            onDismiss?.();
+          });
+        }}
+      >
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+
+      {/* Bottom Sheet */}
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.sheetContainer,
+          {
+            height,
+            transform: [{translateY}],
+            backgroundColor: theme.colors.elevation.level2,
+          },
+        ]}
+      >
+        <SafeAreaView style={{flex: 1}} edges={['bottom']}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{flex: 1}}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View
+                style={[
+                  styles.dragIndicator,
+                  {backgroundColor: theme.colors.outlineVariant},
+                ]}
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  Animated.timing(translateY, {
                     toValue: SCREEN_HEIGHT,
                     duration: 200,
                     useNativeDriver: true,
-                }),
-                Animated.timing(fadeAnim, {
-                    toValue: 0,
-                    duration: 150,
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        }
-    }, [visible]);
-
-    useEffect(() => {
-        const showSub = Keyboard.addListener('keyboardDidShow', e => {
-            setKeyboardHeight(e.endCoordinates.height);
-        });
-        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-            setKeyboardHeight(0);
-        });
-
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
-    }, []);
-
-    const handleGestureEvent = (event) => {
-        const { translationY } = event.nativeEvent;
-        translateY.setValue(translationY);
-    };
-
-    const handleHandlerStateChange = (event) => {
-        if (event.nativeEvent.oldState === State.ACTIVE) {
-            const { translationY } = event.nativeEvent;
-            if (translationY > 100 && enablePanGesture && (isScroll ? isScrollAtTop : true)) {
-                closeModal();
-            } else {
-                resetPosition();
-            }
-        }
-    };
-
-    const closeModal = () => {
-        Animated.parallel([
-            Animated.timing(translateY, {
-                toValue: SCREEN_HEIGHT,
-                duration: 200,
-                useNativeDriver: true,
-            }),
-            Animated.timing(fadeAnim, {
-                toValue: 0,
-                duration: 150,
-                useNativeDriver: true,
-            }),
-        ]).start(onDismiss);
-    };
-
-    const resetPosition = () => {
-        Animated.spring(translateY, {
-            toValue: 0,
-            speed: 30,
-            bounciness: 8,
-            useNativeDriver: true,
-        }).start();
-    };
-
-    const handleScroll = (event) => {
-        const offsetY = event.nativeEvent.contentOffset.y;
-        setIsScrollAtTop(offsetY <= 0);
-    };
-
-    const renderContent = () => {
-        if (isScroll) {
-            return (
-                <ScrollView 
-                    ref={scrollViewRef}
-                    showsVerticalScrollIndicator={false}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                    bounces={false}
-                >
-                    <View style={styles.contentContainer}>
-                        {children}
-                    </View>
-                </ScrollView>
-            );
-        }
-        return (
-            <View style={styles.contentContainer}>
-                {children}
+                  }).start(() => {
+                    setIsMounted(false);
+                    onDismiss?.();
+                  });
+                }}
+                style={[
+                  styles.closeButton,
+                  {backgroundColor: theme.colors.backdrop},
+                ]}
+              >
+                <Text style={{fontSize: 22, color: theme.colors.onSurface}}>
+                  ×
+                </Text>
+              </TouchableOpacity>
             </View>
-        );
-    };
 
-    return (
-        <Portal>
-            <Modal
-                transparent={true}
-                visible={visible}
-                onDismiss={closeModal}
-                style={styles.modal}>
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <Animated.View
-                        style={[styles.backdrop, {opacity: fadeAnim}]}>
-                        <BlurView
-                            style={StyleSheet.absoluteFill}
-                            blurType="dark"
-                            blurAmount={2}
-                            reducedTransparencyFallbackColor="white"
-                        />
-                    </Animated.View>
-                </TouchableWithoutFeedback>
-                {/* //keyboardHeight > 0 ? SCREEN_HEIGHT - keyboardHeight : modalHeight */}
-                <Animated.View
-                    style={[
-                        styles.container,
-                        {
-                            height: modalHeight,
-                            transform: [{translateY}],
-                        },
-                    ]}>
-                    <SafeAreaView style={styles.safeArea}>
-                        {showDragHandle && (
-                            <PanGestureHandler
-                                ref={panGestureRef}
-                                onGestureEvent={handleGestureEvent}
-                                onHandlerStateChange={handleHandlerStateChange}
-                                activeOffsetY={10}
-                                enabled={enablePanGesture && (isScroll ? isScrollAtTop : true)}>
-                                <View style={styles.header}>
-                                    <View style={styles.dragHandleContainer}>
-                                        <View style={styles.dragHandle} />
-                                    </View>
-                                </View>
-                            </PanGestureHandler>
-                        )}
-                        {renderContent()}
-                    </SafeAreaView>
-                </Animated.View>
-            </Modal>
-        </Portal>
-    );
+            {/* Content */}
+            <View style={styles.content}>{children}</View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Animated.View>
+    </>
+  );
 };
+
+const styles = StyleSheet.create({
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 998,
+  },
+  sheetContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -3},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    overflow: 'hidden',
+  },
+  header: {
+    paddingTop: 16,
+    paddingBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  dragIndicator: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 16,
+    top: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+});
 
 export default BottomSheet;

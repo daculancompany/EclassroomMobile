@@ -32,11 +32,14 @@ const ICON_MAP = {
 
 const NotificationBubble = ({
     id,
+    class_id,
     title,
     message,
     className,
     time,
     type = 'info',
+    ntype,
+    class_slug,
     onDismiss,
     onActionPress,
     index = 0,
@@ -60,7 +63,7 @@ const NotificationBubble = ({
     // Adjust vertical position when index changes
     useEffect(() => {
         if (!dismissed.current) {
-            translateY.value = withSpring(BASE_Y + index * 155);
+            translateY.value = withSpring(BASE_Y + index * 180);
         }
     }, [index]);
 
@@ -106,6 +109,7 @@ const NotificationBubble = ({
                             style={styles.icon}
                         />
                         <Title
+                            numberOfLines={1}
                             style={[styles.title, {color: colors.onSurface}]}>
                             {title}
                         </Title>
@@ -115,10 +119,10 @@ const NotificationBubble = ({
                             onPress={hideNotification}
                         />
                     </View>
-                    <Paragraph style={{color: colors.onSurface}}>
+                    <Paragraph  numberOfLines={1}  style={{color: colors.onSurface}}>
                         {message}
                     </Paragraph>
-                    <Paragraph style={{color: colors.onSurface}}>
+                    <Paragraph  numberOfLines={1}  style={{color: colors.onSurface}}>
                         {className}
                     </Paragraph>
                     <View style={styles.buttonWrapper}>
@@ -135,7 +139,7 @@ const NotificationBubble = ({
                                 contentStyle={{flexDirection: 'row-reverse'}}
                                 mode="elevated"
                                 compact
-                                onPress={() => onActionPress(id)}
+                                onPress={() => onActionPress({ntype, id, class_id, class_slug})}
                                 style={styles.actionButton}>
                                 View
                             </Button>
@@ -157,7 +161,7 @@ const styles = StyleSheet.create({
         width: 300,
         elevation: 5,
         borderRadius: 12,
-        // opacity: 0.98,
+        opacity: 0.98,
     },
     header: {
         flexDirection: 'row',

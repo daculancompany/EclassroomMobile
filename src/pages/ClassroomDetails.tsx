@@ -40,6 +40,7 @@ import {DEFAULT_BANNER, HERO_IMAGE} from '../utils/constant';
 import useClassRoomSettings from '../hooks/useClassRoomSettings';
 import {useRoute} from '@react-navigation/native';
 import Pdf from 'react-native-pdf';
+import { BASE_URL } from "../utils/constant"
 
 const AcademicRecordTab = () => (
     <ScrollView style={styles.tabContent}>
@@ -103,7 +104,7 @@ const GradientTabBar = props => {
 const ClassroomDetails = ({navigation}) => {
     const theme = useTheme();
     const route = useRoute();
-    const {class_id} = route.params || {};
+    const {class_id, id, ntype} = route.params || {};
     const [previewImage, setPreviewImage] = useState(null);
     const {
         isLoading,
@@ -111,12 +112,14 @@ const ClassroomDetails = ({navigation}) => {
         refetch: refetchSettings,
     } = useClassRoomSettings(class_id);
 
+ 
+
     useEffect(() => {
         if (classroom) {
             if (classroom.hero_image) {
                 setPreviewImage(HERO_IMAGE + classroom.hero_image);
-            }else{
-                 setPreviewImage(DEFAULT_BANNER);
+            } else {
+                setPreviewImage(DEFAULT_BANNER);
             }
         } else {
             if (!isLoading) {
@@ -126,9 +129,11 @@ const ClassroomDetails = ({navigation}) => {
     }, [classroom]);
 
     const source = {
-        uri: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        uri: `${BASE_URL}course-syllabus.pdf`,
         cache: true,
     };
+
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -161,7 +166,7 @@ const ClassroomDetails = ({navigation}) => {
                     </Appbar.Header>
                 </LinearGradient>
             </ImageBackground>
-            <TabsProvider defaultIndex={0}>
+            <TabsProvider defaultIndex={0} >
                 <Tabs mode="scrollable">
                     <TabScreen
                         label="Broadcast"
@@ -195,7 +200,7 @@ const ClassroomDetails = ({navigation}) => {
                             style={{
                                 height: 500,
                                 backgroundColor: theme.colors.background,
-                                marginTop: 20
+                                marginTop: 20,
                             }}>
                             <Pdf
                                 trustAllCerts={false}

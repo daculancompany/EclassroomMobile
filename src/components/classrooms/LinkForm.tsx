@@ -12,6 +12,7 @@ import {
     Keyboard,
     StyleSheet,
     TouchableWithoutFeedback,
+    ScrollView,
 } from 'react-native';
 import {Text, useTheme} from 'react-native-paper';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -160,82 +161,72 @@ const LinkForm = ({
                         </View>
 
                         {/* Content */}
-                        <View style={styles.content}>
-                            <Text
-                                variant="titleMedium"
-                                style={[
-                                    styles.title,
-                                    {color: theme.colors.onBackground},
-                                ]}>
-                                Paste a Link
-                            </Text>
-
-                            <RNTextInput
-                                placeholder="https://example.com"
-                                value={currentLink}
-                                onChangeText={text => {
-                                    setError('');
-                                    setCurrentLink(text);
-                                }}
-                                keyboardType="url"
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor:
-                                            theme.colors.surfaceVariant,
-                                        color: theme.colors.onSurface,
-                                        borderColor:
-                                            theme.colors.outlineVariant,
-                                    },
-                                ]}
-                                placeholderTextColor={
-                                    theme.colors.onSurfaceDisabled
-                                }
-                            />
-
-                            {error ? (
+                        <ScrollView
+                            contentContainerStyle={styles.contentContainer}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}>
+                            <View style={styles.content}>
                                 <Text
-                                    style={{
-                                        color: theme.colors.error,
-                                        marginTop: 8,
-                                    }}>
-                                    {error}
-                                </Text>
-                            ) : null}
-                        </View>
-
-                        {/* Footer */}
-                        <View
-                            style={[
-                                styles.footer,
-                                {
-                                    borderTopColor: theme.colors.outlineVariant,
-                                    backgroundColor: theme.colors.background,
-                                },
-                            ]}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.button,
-                                    {
-                                        backgroundColor:
-                                            !currentLink?.trim() || submitLink
-                                                ? theme.colors.surfaceDisabled
-                                                : theme.colors.primary,
-                                    },
-                                ]}
-                                onPress={handleValidatedSubmit}
-                                disabled={!currentLink?.trim() || submitLink}>
-                                <Text
+                                    variant="titleMedium"
                                     style={[
-                                        styles.buttonText,
-                                        {color: theme.colors.onPrimary},
+                                        styles.title,
+                                        {color: theme.colors.onBackground},
                                     ]}>
-                                    {submitLink ? 'Submitting...' : 'Confirm'}
+                                   Edit Profile
                                 </Text>
-                            </TouchableOpacity>
-                        </View>
+
+                               
+
+                                {error ? (
+                                    <Text
+                                        style={{
+                                            color: theme.colors.error,
+                                            marginTop: 8,
+                                        }}>
+                                        {error}
+                                    </Text>
+                                ) : null}
+                            </View>
+
+                            {/* Footer */}
+                            <View
+                                style={[
+                                    styles.footer,
+                                    {
+                                        borderTopColor:
+                                            theme.colors.outlineVariant,
+                                        backgroundColor:
+                                            theme.colors.background,
+                                    },
+                                ]}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.button,
+                                        {
+                                            backgroundColor:
+                                                !currentLink?.trim() ||
+                                                submitLink
+                                                    ? theme.colors
+                                                          .surfaceDisabled
+                                                    : theme.colors.primary,
+                                        },
+                                    ]}
+                                    onPress={handleValidatedSubmit}
+                                    disabled={
+                                        !currentLink?.trim() || submitLink
+                                    }>
+                                    <Text
+                                        style={[
+                                            styles.buttonText,
+                                            {color: theme.colors.onPrimary},
+                                        ]}>
+                                        {submitLink
+                                            ? 'Submitting...'
+                                            : 'Confirm'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
                     </KeyboardAvoidingView>
                 </SafeAreaView>
             </Animated.View>

@@ -1,5 +1,5 @@
 //@ts-nocheck
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
     View,
     StyleSheet,
@@ -8,6 +8,8 @@ import {
     Text as Text2,
     ImageBackground,
     RefreshControl,
+    BackHandler,
+    Alert,
 } from 'react-native';
 import {
     Text,
@@ -40,8 +42,39 @@ import dayjs from 'dayjs';
 import {DEFAULT_BANNER, HERO_IMAGE} from '../utils/constant';
 import useClassroomStore from '../states/classroomState';
 import {useGlobalStyles} from '../styles/globalStyles';
+import {Pusher, PusherEvent} from '@pusher/pusher-websocket-react-native';
+import useGlobalStore from '../states/globalState';
+import SoundPlayer from 'react-native-sound-player';
+
+const pusher = Pusher.getInstance();
+
+// Sound.setCategory('Playback'); ios only
 
 const ClassroomListScreen = () => {
+    useEffect(() => {
+        const backAction = () => {
+            Alert.alert('Hold on!', 'Are you sure you want to exit the app?', [
+                {
+                    text: 'Cancel',
+                    onPress: () => null,
+                    style: 'cancel',
+                },
+                {
+                    text: 'Yes',
+                    onPress: () => BackHandler.exitApp(),
+                },
+            ]);
+            return true; // prevent default behavior
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction,
+        );
+
+        return () => backHandler.remove();
+    }, []);
+
     const globalStyle = useGlobalStyles();
     const theme = useTheme();
     const navigation = useNavigation();
@@ -49,8 +82,85 @@ const ClassroomListScreen = () => {
     const [filterVisible, setFilterVisible] = useState(false);
     const [capacityFilter, setCapacityFilter] = useState(null);
     const [buildingFilter, setBuildingFilter] = useState(null);
+    const {notifications, addNotification} = useGlobalStore();
     const {data: classrooms, isFetching, isLoading, refetch} = useClassroom();
     const {setField} = useClassroomStore();
+
+    const playNotificationSound = () => {
+        try {
+            SoundPlayer.playSoundFile('notification', 'mp3');
+        } catch (e) {
+            console.log('Cannot play the sound file', e);
+        }
+    };
+
+    useEffect(() => {
+        let isMounted = true;
+        const channels = [];
+        const setupPusher = async () => {
+            try {
+                await pusher.init({
+                    apiKey: '2a008480987a89072eaf',
+                    cluster: 'ap1',
+                });
+
+                await pusher.connect();
+
+                Array.isArray(classrooms) &&
+                    classrooms.forEach(async classroom => {
+                        const channelName = `classwork.${classroom.id}`;
+
+                        const channel = await pusher.subscribe({
+                            channelName: channelName,
+                            onEvent: event => {
+                                if (!isMounted) return;
+
+                                if (event.eventName === 'classwork') {
+                                    try {
+                                        // ✅ Parse data (handle both string & object)
+                                        const data =
+                                            typeof event.data === 'string'
+                                                ? JSON.parse(event.data)
+                                                : event.data;
+
+                                        addNotification({
+                                            id: data.id,
+                                            class_id: data.class_id,
+                                            class_slug: data.class_slug,
+                                            ntype: 'classwork',
+                                            title: data.title,
+                                            message: data.message,
+                                            className: data.className,
+                                            time: data.time,
+                                        });
+                                        playNotificationSound();
+                                    } catch (e) {
+                                        console.error(
+                                            'Error processing notification:',
+                                            e,
+                                        );
+                                    }
+                                }
+                            },
+                        });
+                        channels.push(channel);
+                        console.log('Subscribed to channel:', channelName);
+                    });
+            } catch (error) {
+                console.error('Pusher setup failed:', error);
+            }
+        };
+
+        setupPusher();
+
+        return () => {
+            isMounted = false;
+            channels.forEach(channel => {
+                pusher.unsubscribe({channelName: channel.channelName});
+            });
+            pusher.disconnect();
+        };
+    }, [classrooms]);
 
     const buildings = [];
 
@@ -88,7 +198,7 @@ const ClassroomListScreen = () => {
     };
 
     const renderItem = ({item}) => (
-        <Card style={styles.card}>
+        <Card style={[styles.card, {backgroundColor: theme.colors.surface}]}>
             <TouchableRipple
                 onPress={() => {
                     setField('faculty', item?.faculty) || null;
@@ -136,7 +246,11 @@ const ClassroomListScreen = () => {
                         <Paragraph style={styles.cardText} numberOfLines={1}>
                             <MaterialIcons name="class" size={16} />{' '}
                             <Text style={styles.boldText}>Class:</Text>{' '}
-                            <Text style={styles.className}>
+                            <Text
+                                style={[
+                                    styles.className,
+                                    {color: theme.colors.primary},
+                                ]}>
                                 {item.class_name}
                             </Text>{' '}
                         </Paragraph>
@@ -208,15 +322,18 @@ const ClassroomListScreen = () => {
         <>
             <GradientStatusBar />
             <LinearGradient
-                colors={[theme.colors.background, theme.colors.background]}
+                colors={[
+                    theme.colors.elevation.level1,
+                    theme.colors.elevation.level1,
+                ]}
                 style={styles.container}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 1}}>
-                <Appbar.Header style={{backgroundColor: 'transparent'}}>
+                <Appbar.Header style={{ backgroundColor : 'transparent' }} >
                     <Appbar.Content
                         title={<Text variant="headlineSmall">Classrooms</Text>}
                     />
-                    <Menu
+                    {/* <Menu
                         visible={filterVisible}
                         onDismiss={() => setFilterVisible(false)}
                         anchor={
@@ -268,7 +385,7 @@ const ClassroomListScreen = () => {
                                 setFilterVisible(false);
                             }}
                         />
-                    </Menu>
+                    </Menu> */}
                 </Appbar.Header>
 
                 {/* <View style={styles.searchContainer}>
@@ -326,7 +443,7 @@ const ClassroomListScreen = () => {
                         </View>
                     )}
                 </View>
-                <View style={{flex: 1, marginBottom: 40}}>
+                <View style={{flex: 1, marginHorizontal: 10}}>
                     <FlatList
                         data={filteredClassrooms}
                         renderItem={renderItem}
@@ -363,6 +480,7 @@ const ClassroomListScreen = () => {
                         //     ) : null
                         // }
                     />
+           
                 </View>
 
                 <Menu
@@ -507,7 +625,6 @@ const styles = StyleSheet.create({
     },
     className: {
         fontWeight: 'bold',
-        color: '#6200ee',
     },
     cardActions: {
         flexDirection: 'row',

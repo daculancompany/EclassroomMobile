@@ -9,6 +9,7 @@ import {
     useWindowDimensions,
     RefreshControl,
     Animated,
+    InteractionManager,
 } from 'react-native';
 import {
     Card,
@@ -51,13 +52,51 @@ const ClassworksTab = () => {
     const {setField, studentSubmission, faculty, classworkDetails} =
         useClassroomStore();
     const route = useRoute();
-    const {class_id} = route.params || {};
+    const {class_id, id: classworkId, ntype} = route.params || {};
     const {
         isLoading,
         data: classworks,
         refetch,
         isFetching,
     } = useClassworks(class_id);
+    useEffect(() => {
+        const task = InteractionManager.runAfterInteractions(async () => {
+            if (ntype === 'classwork') {
+                const classwork = classworks.find(
+                    item => item.slug === classworkId,
+                );
+                if(!classwork?.id){
+                    return;
+                }
+                setField('classwork_id', classwork?.slug);
+                setField('classwork', classwork);
+                const student = JSON.parse(await AsyncStorage.getItem('user'));
+                const student_id = student?.student_id;
+                setField('otherUser', {
+                    id: faculty?.id,
+                    name: `${faculty?.fname} ${faculty?.lname}`,
+                    role: 'faculty',
+                    email: '',
+                });
+
+                setField('currentUser', {
+                    id: student_id,
+                    name: `Student Name`,
+                    role: 'student',
+                    email: '',
+                });
+
+                navigation.navigate('StudentWork', {
+                    classworkId: classworkId,
+                });
+            }
+        });
+
+        // Optional cleanup if needed
+        return () => {
+            task?.cancel?.();
+        };
+    }, [classworks]);
 
     const [activePanels, setActivePanels] = useState([]);
     const [filterTerm, setFilterTerm] = useState(null);
@@ -392,13 +431,6 @@ const ClassworksTab = () => {
             role: 'student',
             email: '',
         });
-        // showBottomSheet(
-        //     <StudentWork class_id={class_id} />,
-        //     {
-        //         heightPercentage: 0.95,
-        //         enablePanGesture: false,
-        //     },
-        // );
         navigation.navigate('StudentWork', {
             classworkId: classwork?.slug,
         });

@@ -23,4 +23,10 @@ const productValidationSchema = Yup.object().shape({
     description: Yup.string().required('Description is required'),
 });
 
-export {loginValidationSchema, productValidationSchema};
+const profileValidationSchema = Yup.object().shape({
+    fname: Yup.string().required('First Name is required'),
+    lname: Yup.string().required('Last Name is required'),
+    phone: Yup.string().required('Contact Number is required'),
+});
+
+export {loginValidationSchema, productValidationSchema, profileValidationSchema};

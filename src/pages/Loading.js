@@ -39,11 +39,11 @@ const Loading = ({ navigation }) => {
         const checkLoginStatus = async () => {
             const userToken = await AsyncStorage.getItem('token');
             if (userToken) {
-                // navigation.reset({
-                //     // index: 0,
-                //     routes: [{ name: 'Main' }],
-                // });
-                 navigation.navigate('Main');
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Main' }],
+                });
+                //navigation.navigate('Main');
             } else {
                  navigation.navigate('Login');
             }

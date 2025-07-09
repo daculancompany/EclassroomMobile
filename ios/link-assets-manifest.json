@@ -44,6 +44,10 @@
     {
       "path": "assets/fonts/OFL.txt",
       "sha1": "8414f6d5e907adb8e95e5a737a0a6fc98a134ddb"
+    },
+    {
+      "path": "assets/sounds/new-notification.mp3",
+      "sha1": "db981dc86ef5afd6fc600055f5e786be3b20cf05"
     }
   ]
 }
