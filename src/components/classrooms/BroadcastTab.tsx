@@ -89,7 +89,7 @@ const {height} = Dimensions.get('window');
 const ActionButton = React.memo(
     ({icon, text, count, active, onPress, color, theme}) => {
         return (
-            <TouchableOpacity style={styles.actionButton} onPress={onPress}>
+            <TouchableOpacity  style={styles.actionButton} onPress={onPress}>
                 <Icon
                     name={icon}
                     size={16}
@@ -977,6 +977,7 @@ const BroadcastPage = () => {
                 onPress={() => handleLike(type, item.id)}
                 color={isLiked ? theme.colors.primary : undefined}
                 theme={theme}
+                
             />
         );
     };

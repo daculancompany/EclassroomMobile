@@ -15,10 +15,18 @@ export const useGlobalStyles = () => {
         assignmentCard: {
             margin: 8,
             borderRadius: 8,
-            elevation: 2,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.elevation.level1,
             shadowColor: theme.colors.shadow,
+            // Android shadow
+            elevation: 5,
+
+            // iOS shadow
+            shadowColor: '#000',
+            shadowOffset: {width: 0, height: 2},
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
         },
+
         assignmentContent: {
             padding: 16,
         },

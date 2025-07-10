@@ -549,7 +549,6 @@ const ClassworksTab = () => {
                 }}>
                 <StudentWork class_id={class_id} />
             </BottomSheet> */}
-            {isLoading && <IconTextIcon count={4} />}
             {!isLoading && (
                 <>
                     <Animated.View
@@ -723,6 +722,7 @@ const ClassworksTab = () => {
                     />
                 </>
             )}
+            {isLoading && <IconTextIcon count={4} />}
         </>
     );
 };

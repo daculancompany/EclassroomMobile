@@ -1,5 +1,5 @@
 //@ts-nocheck
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
     View,
     StyleSheet,
@@ -10,6 +10,7 @@ import {
     RefreshControl,
     BackHandler,
     Alert,
+    Animated,
 } from 'react-native';
 import {
     Text,
@@ -48,32 +49,22 @@ import SoundPlayer from 'react-native-sound-player';
 
 const pusher = Pusher.getInstance();
 
-// Sound.setCategory('Playback'); ios only
-
 const ClassroomListScreen = () => {
-    useEffect(() => {
-        const backAction = () => {
-            Alert.alert('Hold on!', 'Are you sure you want to exit the app?', [
-                {
-                    text: 'Cancel',
-                    onPress: () => null,
-                    style: 'cancel',
-                },
-                {
-                    text: 'Yes',
-                    onPress: () => BackHandler.exitApp(),
-                },
-            ]);
-            return true; // prevent default behavior
-        };
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const headerHeight = 90; // Typical Appbar height
 
-        const backHandler = BackHandler.addEventListener(
-            'hardwareBackPress',
-            backAction,
-        );
+    // Header animation values
+    const headerTranslateY = scrollY.interpolate({
+        inputRange: [0, headerHeight],
+        outputRange: [0, -headerHeight],
+        extrapolate: 'clamp',
+    });
 
-        return () => backHandler.remove();
-    }, []);
+    const headerOpacity = scrollY.interpolate({
+        inputRange: [0, headerHeight * 0.8], // Start fading out earlier
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
+    });
 
     const globalStyle = useGlobalStyles();
     const theme = useTheme();
@@ -85,6 +76,39 @@ const ClassroomListScreen = () => {
     const {notifications, addNotification} = useGlobalStore();
     const {data: classrooms, isFetching, isLoading, refetch} = useClassroom();
     const {setField} = useClassroomStore();
+
+    useEffect(() => {
+        const backAction = () => {
+            // Check if the current route is the initial/main screen
+            if (navigation.isFocused()) {
+                Alert.alert(
+                    'Hold on!',
+                    'Are you sure you want to exit the app?',
+                    [
+                        {
+                            text: 'Cancel',
+                            onPress: () => null,
+                            style: 'cancel',
+                        },
+                        {
+                            text: 'Yes',
+                            onPress: () => BackHandler.exitApp(),
+                        },
+                    ],
+                );
+                return true;
+            }
+            // If not on the main screen, let the default back behavior occur
+            return false;
+        };
+
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction,
+        );
+
+        return () => backHandler.remove();
+    }, [navigation]);
 
     const playNotificationSound = () => {
         try {
@@ -117,7 +141,6 @@ const ClassroomListScreen = () => {
 
                                 if (event.eventName === 'classwork') {
                                     try {
-                                        // ✅ Parse data (handle both string & object)
                                         const data =
                                             typeof event.data === 'string'
                                                 ? JSON.parse(event.data)
@@ -167,12 +190,10 @@ const ClassroomListScreen = () => {
     const filteredClassrooms =
         Array.isArray(classrooms) &&
         classrooms.filter(classroom => {
-            // Search by name
             const matchesSearch = classroom.class_name
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase());
 
-            // Filter by capacity
             let matchesCapacity = true;
             if (capacityFilter === 'small') {
                 matchesCapacity = classroom.capacity < 20;
@@ -183,7 +204,6 @@ const ClassroomListScreen = () => {
                 matchesCapacity = classroom.capacity >= 40;
             }
 
-            // Filter by building
             const matchesBuilding = buildingFilter
                 ? classroom.building === buildingFilter
                 : true;
@@ -198,109 +218,104 @@ const ClassroomListScreen = () => {
     };
 
     const renderItem = ({item}) => (
-        <Card style={[styles.card, {backgroundColor: theme.colors.surface}]}>
-            <TouchableRipple
-                onPress={() => {
-                    setField('faculty', item?.faculty) || null;
-                    navigation.navigate('ClassroomDetails', {
-                        class_id: item?.slug,
-                    });
-                }}>
-                <>
-                    <ImageBackground
-                        source={{
-                            uri: item?.hero_image
-                                ? HERO_IMAGE + item?.hero_image
-                                : DEFAULT_BANNER,
-                        }}
-                        style={styles.cardImage}
-                        resizeMode="cover">
-                        <LinearGradient
-                            colors={[
-                                'rgba(255, 0, 255, 0.7)',
-                                'rgba(59, 245, 245, 0.7)',
-                            ]}
-                            start={{x: 0, y: 0}}
-                            end={{x: 1, y: 1}}
-                            style={{
-                                // borderRadius: 12,
-                                padding: 0,
-                                paddingTop: 0,
-                                // paddingBottom: 7,
-                                margin: 0,
-                                // opacity: 0.9,
-                            }}>
-                            <View style={styles.titleHeader}>
-                                <Title
-                                    style={styles.cardTitle}
-                                    numberOfLines={1}>
-                                    {item?.subject?.subject_name}
-                                </Title>
-                                <Text style={styles.cardSubtitle}>
-                                    {item?.subject?.subject_code}
-                                </Text>
-                            </View>
-                        </LinearGradient>
-                    </ImageBackground>
-                    <Card.Content style={styles.cardContent}>
-                        <Paragraph style={styles.cardText} numberOfLines={1}>
-                            <MaterialIcons name="class" size={16} />{' '}
-                            <Text style={styles.boldText}>Class:</Text>{' '}
-                            <Text
-                                style={[
-                                    styles.className,
-                                    {color: theme.colors.primary},
-                                ]}>
-                                {item.class_name}
-                            </Text>{' '}
-                        </Paragraph>
-                        <Paragraph style={styles.cardText}>
-                            <MaterialCommunityIcons
-                                name="google-classroom"
-                                size={16}
-                            />{' '}
-                            <Text style={styles.boldText}>Section:</Text>{' '}
-                            {item.section}
-                        </Paragraph>
-                        <Paragraph style={styles.cardText}>
-                            <MaterialCommunityIcons
-                                name="google-classroom"
-                                size={16}
-                            />{' '}
-                            <Text style={styles.boldText}>Room:</Text>{' '}
-                            {item.room}
-                        </Paragraph>
-                        <Paragraph style={styles.cardText}>
-                            <FontAwesome name="calendar" size={16} />{' '}
-                            <Text style={styles.boldText}>Day:</Text> {item.day}
-                        </Paragraph>
-                        <Paragraph style={styles.cardText}>
-                            <AntDesign name="clockcircle" size={16} />{' '}
-                            <Text style={styles.boldText}>Time:</Text>{' '}
-                            {dayjs(
-                                `1970-01-01 ${item.time_in}`,
-                                'YYYY-MM-DD HH:mm:ss',
-                            ).format('h A')}{' '}
-                            -{' '}
-                            {dayjs(
-                                `1970-01-01 ${item.time_out}`,
-                                'YYYY-MM-DD HH:mm:ss',
-                            ).format('h A')}
-                        </Paragraph>
-                    </Card.Content>
+        <TouchableRipple
+            borderless={true}
+            onPress={() => {
+                setField('faculty', item?.faculty) || null;
+                navigation.navigate('ClassroomDetails', {
+                    class_id: item?.slug,
+                });
+            }}
+            style={[globalStyle.assignmentCard, {elevation: 5}]}>
+            <>
+                <ImageBackground
+                    source={{
+                        uri: item?.hero_image
+                            ? HERO_IMAGE + item?.hero_image
+                            : DEFAULT_BANNER,
+                    }}
+                    style={styles.cardImage}
+                    resizeMode="cover">
+                    <LinearGradient
+                        colors={[
+                            'rgba(255, 0, 255, 0.7)',
+                            'rgba(59, 245, 245, 0.7)',
+                        ]}
+                        start={{x: 0, y: 0}}
+                        end={{x: 1, y: 1}}
+                        style={{
+                            padding: 0,
+                            paddingTop: 0,
+                            margin: 0,
+                        }}>
+                        <View style={styles.titleHeader}>
+                            <Title style={styles.cardTitle} numberOfLines={1}>
+                                {item?.subject?.subject_name}
+                            </Title>
+                            <Text style={styles.cardSubtitle}>
+                                {item?.subject?.subject_code}
+                            </Text>
+                        </View>
+                    </LinearGradient>
+                </ImageBackground>
+                <Card.Content style={styles.cardContent}>
+                    <Paragraph style={styles.cardText} numberOfLines={1}>
+                        <MaterialIcons name="class" size={16} />{' '}
+                        <Text style={styles.boldText}>Class:</Text>{' '}
+                        <Text
+                            style={[
+                                styles.className,
+                                {color: theme.colors.primary},
+                            ]}>
+                            {item.class_name}
+                        </Text>{' '}
+                    </Paragraph>
+                    <Paragraph style={styles.cardText}>
+                        <MaterialCommunityIcons
+                            name="google-classroom"
+                            size={16}
+                        />{' '}
+                        <Text style={styles.boldText}>Section:</Text>{' '}
+                        {item.section}
+                    </Paragraph>
+                    <Paragraph style={styles.cardText}>
+                        <MaterialCommunityIcons
+                            name="google-classroom"
+                            size={16}
+                        />{' '}
+                        <Text style={styles.boldText}>Room:</Text> {item.room}
+                    </Paragraph>
+                    <Paragraph style={styles.cardText}>
+                        <FontAwesome name="calendar" size={16} />{' '}
+                        <Text style={styles.boldText}>Day:</Text> {item.day}
+                    </Paragraph>
+                    <Paragraph style={styles.cardText}>
+                        <AntDesign name="clockcircle" size={16} />{' '}
+                        <Text style={styles.boldText}>Time:</Text>{' '}
+                        {dayjs(
+                            `1970-01-01 ${item.time_in}`,
+                            'YYYY-MM-DD HH:mm:ss',
+                        ).format('h A')}{' '}
+                        -{' '}
+                        {dayjs(
+                            `1970-01-01 ${item.time_out}`,
+                            'YYYY-MM-DD HH:mm:ss',
+                        ).format('h A')}
+                    </Paragraph>
+                </Card.Content>
 
-                    <Card.Actions style={styles.cardActions}>
-                        <Text style={styles.studentCount}>
-                            {item?.students_count || 0} students enrolled
-                        </Text>
-                        {/* <IconButton
-                            icon="eye"
-                            onPress={() => handleNavigate(item?.slug)}
-                        /> */}
-                    </Card.Actions>
-                </>
-            </TouchableRipple>
-        </Card>
+                <Card.Actions style={styles.cardActions}>
+                    <Text style={styles.studentCount}>
+                        {item?.students_count || 0} students enrolled
+                    </Text>
+                    <Text style={styles.studentCount}>
+                        {item?.status === 'lock' && (
+                            <MaterialIcons name="lock-outline" size={20} color={theme.colors.error} />
+                        )}
+                    </Text>
+                </Card.Actions>
+            </>
+        </TouchableRipple>
     );
 
     const GradientIconButton = ({icon, onPress, colors}) => (
@@ -318,138 +333,63 @@ const ClassroomListScreen = () => {
         </LinearGradient>
     );
 
+    const handleScroll = Animated.event(
+        [{nativeEvent: {contentOffset: {y: scrollY}}}],
+        {useNativeDriver: true},
+    );
+
     return (
         <>
             <GradientStatusBar />
-            <LinearGradient
-                colors={[
-                    theme.colors.elevation.level1,
-                    theme.colors.elevation.level1,
-                ]}
-                style={styles.container}
-                start={{x: 0, y: 0}}
-                end={{x: 1, y: 1}}>
-                <Appbar.Header style={{ backgroundColor : 'transparent' }} >
-                    <Appbar.Content
-                        title={<Text variant="headlineSmall">Classrooms</Text>}
-                    />
-                    {/* <Menu
-                        visible={filterVisible}
-                        onDismiss={() => setFilterVisible(false)}
-                        anchor={
-                            <GradientIconButton
-                                icon={() => (
-                                    <Ionicons
-                                        name="filter-outline"
-                                        size={24}
-                                        color={theme.colors.onPrimary}
-                                    />
-                                )}
-                                onPress={() => setFilterVisible(true)}
-                                colors={[
-                                    'rgba(255, 0, 255, 0.7)',
-                                    'rgba(59, 245, 245, 0.7)',
-                                ]}
+            <View style={styles.container}>
+                <LinearGradient
+                    colors={[theme.colors.background, theme.colors.background]}
+                    style={styles.background}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 1}}>
+                    {/* Animated Header */}
+                    <Animated.View
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: headerHeight,
+                            zIndex: 10,
+                            transform: [{translateY: headerTranslateY}],
+                            opacity: headerOpacity,
+                        }}>
+                        <Appbar.Header
+                            style={{
+                                backgroundColor: 'transparent',
+                                elevation: 0,
+                            }}>
+                            <Appbar.Content
+                                title={
+                                    <Text variant="headlineSmall">
+                                        Classrooms
+                                    </Text>
+                                }
                             />
-                        }>
-                        <Menu.Item
-                            leadingIcon="magnify"
-                            title="Search"
-                            onPress={() => {
-                                setFilterVisible(false);
-                                // You might want to focus on the search input here
-                            }}
-                        />
-                        <Menu.Item
-                            leadingIcon="account-group"
-                            title="Capacity"
-                            onPress={() => {
-                                setFilterVisible(false);
-                                // Show capacity filter options
-                            }}
-                        />
-                        <Menu.Item
-                            leadingIcon="office-building"
-                            title="Building"
-                            onPress={() => {
-                                setFilterVisible(false);
-                                // Show building filter options
-                            }}
-                        />
-                        <Divider />
-                        <Menu.Item
-                            leadingIcon="filter-remove"
-                            title="Clear Filters"
-                            onPress={() => {
-                                clearFilters();
-                                setFilterVisible(false);
-                            }}
-                        />
-                    </Menu> */}
-                </Appbar.Header>
+                        </Appbar.Header>
+                    </Animated.View>
 
-                {/* <View style={styles.searchContainer}>
-                    <TextInput
-                        placeholder="Search classrooms..."
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        style={styles.searchInput}
-                        left={<TextInput.Icon icon="magnify" />}
-                        mode="outlined"
-                    />
-                </View> */}
-
-                <View style={styles.filterChips}>
-                    {capacityFilter && (
-                        <View
-                            style={[
-                                styles.chip,
-                                {
-                                    backgroundColor:
-                                        theme.colors.primaryContainer,
-                                },
-                            ]}>
-                            <Text style={styles.chipText}>
-                                {capacityFilter === 'small'
-                                    ? 'Small (<20)'
-                                    : capacityFilter === 'medium'
-                                    ? 'Medium (20-40)'
-                                    : 'Large (40+)'}
-                            </Text>
-                            <IconButton
-                                icon="close"
-                                size={16}
-                                onPress={() => setCapacityFilter(null)}
-                            />
-                        </View>
-                    )}
-                    {buildingFilter && (
-                        <View
-                            style={[
-                                styles.chip,
-                                {
-                                    backgroundColor:
-                                        theme.colors.primaryContainer,
-                                },
-                            ]}>
-                            <Text style={styles.chipText}>
-                                {buildingFilter}
-                            </Text>
-                            <IconButton
-                                icon="close"
-                                size={16}
-                                onPress={() => setBuildingFilter(null)}
-                            />
-                        </View>
-                    )}
-                </View>
-                <View style={{flex: 1, marginHorizontal: 10}}>
-                    <FlatList
+                    {/* Main Content */}
+                    <Animated.FlatList
                         data={filteredClassrooms}
                         renderItem={renderItem}
                         keyExtractor={item => item.id}
-                        contentContainerStyle={styles.listContent}
+                        contentContainerStyle={[
+                            styles.listContent,
+                            {
+                                paddingTop: headerHeight,
+                                paddingHorizontal: 10, // Add horizontal padding here
+                                paddingBottom: 70,
+                            },
+                        ]}
                         showsVerticalScrollIndicator={false}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
                         refreshControl={
                             <RefreshControl
                                 refreshing={isFetching}
@@ -458,44 +398,18 @@ const ClassroomListScreen = () => {
                         }
                         ListEmptyComponent={
                             !isLoading ? (
-                                <View style={globalStyle.emptyContainer}>
-                                    <Avatar.Icon
-                                        size={64}
-                                        icon="school-outline"
-                                        style={globalStyle.emptyIcon}
-                                    />
-                                    <Text style={globalStyle.emptyTitle}>
-                                        No Classrooms Found
-                                    </Text>
-                                    <Text style={globalStyle.emptySubtitle}>
-                                        Your classrooms will appear here once
-                                        they're added.
-                                    </Text>
+                                <View
+                                    style={[
+                                        globalStyle.emptyContainer,
+                                        {paddingTop: headerHeight},
+                                    ]}>
+                                    {/* Empty state content */}
                                 </View>
                             ) : null
                         }
-                        // ListFooterComponent={
-                        //     isLoading ? (
-                        //         <ActivityIndicator animating={true} />
-                        //     ) : null
-                        // }
                     />
-           
-                </View>
-
-                <Menu
-                    visible={false} // You'll need to manage this state
-                    onDismiss={() => {}}
-                    anchor={<View />}>
-                    {buildings.map(building => (
-                        <Menu.Item
-                            key={building}
-                            title={building}
-                            onPress={() => setBuildingFilter(building)}
-                        />
-                    ))}
-                </Menu>
-            </LinearGradient>
+                </LinearGradient>
+            </View>
         </>
     );
 };
@@ -505,10 +419,36 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 8,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 90,
+        zIndex: 10,
+        backgroundColor: 'rgba(255,255,255,0.97)',
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    appBarHeader: {
+        backgroundColor: 'transparent',
+        elevation: 0,
+    },
+    listContent: {
+        paddingTop: 90,
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+    },
+    card: {
+        marginBottom: 16,
+        elevation: 2,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    cardImage: {
+        height: 180,
+        justifyContent: 'flex-end',
     },
     headerTitle: {
         marginLeft: 8,
@@ -528,9 +468,7 @@ const styles = StyleSheet.create({
     cardDetails: {
         marginLeft: 34,
     },
-    cardContent: {
-        // padding: 15,
-    },
+    cardContent: {},
     detailRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -587,7 +525,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         opacity: 0.6,
     },
-
     card: {
         marginBottom: 16,
         elevation: 4,

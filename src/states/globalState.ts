@@ -7,6 +7,7 @@ const useGlobalStore = create(set => ({
     fileViewer: {visible: true, url: null, onDismiss: null},
     visible: false,
     notifications: [],
+    notificationCount: 0,
     addNotification: newNotification =>
         set(state => {
             const exists = state.notifications.some(

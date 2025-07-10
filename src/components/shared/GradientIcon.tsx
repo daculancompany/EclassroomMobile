@@ -14,7 +14,7 @@ const GradientIcon = ({name, size, colors}) => {
                 </View>
             }>
             <LinearGradient
-                colors={['#FF00FF', '#3bf5f5']}
+                colors={['#0af5f5', '#FF00FF']}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 1}}
                 style={{width: size, height: size}}>

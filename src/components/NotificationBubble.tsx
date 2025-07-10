@@ -99,7 +99,14 @@ const NotificationBubble = ({
         <Animated.View style={[styles.notificationContainer, animatedStyle]}>
             <Card
                 onPress={() => onActionPress?.(id)}
-                style={[styles.card, {backgroundColor: colors.surface}]}>
+                style={[
+                    styles.card,
+                    {
+                        backgroundColor: colors.surface,
+                        borderLeftWidth: 4,
+                        borderLeftColor: colors.primary,
+                    },
+                ]}>
                 <Card.Content>
                     <View style={styles.header}>
                         <MaterialCommunityIcons
@@ -119,10 +126,14 @@ const NotificationBubble = ({
                             onPress={hideNotification}
                         />
                     </View>
-                    <Paragraph  numberOfLines={1}  style={{color: colors.onSurface}}>
+                    <Paragraph
+                        numberOfLines={1}
+                        style={{color: colors.onSurface}}>
                         {message}
                     </Paragraph>
-                    <Paragraph  numberOfLines={1}  style={{color: colors.onSurface}}>
+                    <Paragraph
+                        numberOfLines={1}
+                        style={{color: colors.onSurface}}>
                         {className}
                     </Paragraph>
                     <View style={styles.buttonWrapper}>
@@ -139,7 +150,14 @@ const NotificationBubble = ({
                                 contentStyle={{flexDirection: 'row-reverse'}}
                                 mode="elevated"
                                 compact
-                                onPress={() => onActionPress({ntype, id, class_id, class_slug})}
+                                onPress={() =>
+                                    onActionPress({
+                                        ntype,
+                                        id,
+                                        class_id,
+                                        class_slug,
+                                    })
+                                }
                                 style={styles.actionButton}>
                                 View
                             </Button>

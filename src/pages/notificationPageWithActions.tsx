@@ -24,16 +24,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import useNotifications from '../hooks/useNotifications';
 import GradientStatusBar from './GradientStatusBar';
 import {useGlobalStyles} from '../styles/globalStyles';
-import useGlobalStore from '../states/globalState';
-
-const iconMap = {
-    classwork: 'book',
-    message: 'email',
-    payment: 'cash',
-    event: 'calendar',
-    update: 'update',
-    follower: 'account-plus',
-};
 
 const NotificationPage = () => {
     const theme = useTheme();
@@ -46,63 +36,56 @@ const NotificationPage = () => {
         markAsRead,
         deleteNotification,
     } = useNotifications();
-    const {setField} = useGlobalStore();
 
+    const [notifications, setNotifications] = useState([]);
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [actionSheetVisible, setActionSheetVisible] = useState(false);
-    const [localNotifications, setLocalNotifications] = useState([]);
     const slideAnim = useState(new Animated.Value(300))[0];
     const fadeAnim = useState(new Animated.Value(0))[0];
     const actionSheetRef = useRef(null);
 
-    // const notifications = useMemo(() => {
-    //     if (!data) return [];
-    //     return data.map(item => {
-    //         let parsedData = {};
-    //         try {
-    //             parsedData = JSON.parse(item?.data);
-    //         } catch (err) {
-    //             console.error('Failed to parse message:', item?.message);
-    //         }
+    const mappedNotifications = useMemo(() => {
+        if (!data) return [];
 
-    //         return {
-    //             ...item,
-    //             icon: iconMap[item?.notifiable_type] || 'bell',
-    //             parsed: parsedData,
-    //         };
-    //     });
-    // }, [data]);
+        return data.map(item => {
+            let parsedData = {};
+            try {
+                parsedData = JSON.parse(item?.data);
+            } catch (err) {
+                console.error('Failed to parse message:', item.message);
+            }
+            let icon = 'bell';
 
-    useEffect(() => {
-        if (data) {
-            setLocalNotifications(
-                data.map(item => {
-                    let parsedData = {};
-                    try {
-                        parsedData = JSON.parse(item?.data);
-                    } catch (err) {
-                        console.error(
-                            'Failed to parse message:',
-                            item?.message,
-                        );
-                    }
+            switch (item?.notifiable_type) {
+                case 'classwork':
+                    icon = 'book';
+                    break;
+                case 'message':
+                    icon = 'email';
+                    break;
+                case 'payment':
+                    icon = 'cash';
+                    break;
+                case 'event':
+                    icon = 'calendar';
+                    break;
+                case 'update':
+                    icon = 'update';
+                    break;
+                case 'follower':
+                    icon = 'account-plus';
+                    break;
+                default:
+                    icon = 'bell';
+            }
 
-                    return {
-                        ...item,
-                        icon: iconMap[item?.notifiable_type] || 'bell',
-                        parsed: parsedData,
-                    };
-                }),
-            );
-        }
+            return {
+                ...item,
+                icon,
+                parsed: parsedData,
+            };
+        });
     }, [data]);
-
-    useEffect(() => {
-        if (localNotifications) {
-            const unreadCount = localNotifications.filter(n => !n.read).length;
-            setField('notificationCount', unreadCount);
-        }
-    }, [localNotifications]);
 
     useEffect(() => {
         if (actionSheetVisible) {
@@ -135,6 +118,11 @@ const NotificationPage = () => {
             ]).start();
         }
     }, [actionSheetVisible]);
+
+ 
+    useEffect(() => {
+        setNotifications(mappedNotifications);
+    }, [mappedNotifications]); // Only update when mappedNotifications changes
 
     // Memoize the action handlers
     const handleAction = useCallback(
@@ -171,9 +159,11 @@ const NotificationPage = () => {
         setActionSheetVisible(true);
     }, []);
 
-    const handleOverlayPress = () => {
+     const handleOverlayPress = () => {
         setActionSheetVisible(false);
     };
+
+  
 
     return (
         <>
@@ -202,7 +192,7 @@ const NotificationPage = () => {
                     }
                     contentContainerStyle={styles.container}
                     showsVerticalScrollIndicator={false}>
-                    {localNotifications.map(notification => {
+                    {notifications.map(notification => {
                         const {
                             id,
                             icon,
@@ -216,9 +206,9 @@ const NotificationPage = () => {
                                 borderless={true}
                                 onPress={() => {
                                     if (!read) {
-                                        //markAsRead(id);
-                                        setLocalNotifications(prev =>
-                                            prev.map(n =>
+                                        markAsRead(id);
+                                        setNotifications(
+                                            notifications.map(n =>
                                                 n.id === id
                                                     ? {...n, read: true}
                                                     : n,
